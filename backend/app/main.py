@@ -22,10 +22,12 @@ app = FastAPI(
 from app.api.auth import router as auth_router
 from app.api.companies import router as companies_router
 from app.api.workers import router as workers_router
+from app.api.deadlines import router as deadlines_router
 
 app.include_router(auth_router)
 app.include_router(companies_router)
 app.include_router(workers_router)
+app.include_router(deadlines_router)
 
 # CORS middleware
 app.add_middleware(
@@ -36,13 +38,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # Health check endpoint
 @app.get("/health", tags=["Health"])
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "service": settings.PROJECT_NAME}
-
 
 @app.get("/api", tags=["API"])
 async def api_root():
@@ -53,10 +53,8 @@ async def api_root():
         "api_v1": f"{settings.API_V1_STR}",
     }
 
-
 if __name__ == "__main__":
     import uvicorn
-    
     uvicorn.run(
         app,
         host="0.0.0.0",
