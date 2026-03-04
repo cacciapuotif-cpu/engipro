@@ -24,12 +24,14 @@ from app.api.companies import router as companies_router
 from app.api.workers import router as workers_router
 from app.api.deadlines import router as deadlines_router
 from app.api.documents import router as documents_router
+from app.api.training import router as training_router
 
 app.include_router(auth_router)
 app.include_router(companies_router)
 app.include_router(workers_router)
 app.include_router(deadlines_router)
 app.include_router(documents_router)
+app.include_router(training_router)
 
 # CORS middleware
 app.add_middleware(
@@ -40,15 +42,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Health check endpoint
 @app.get("/health", tags=["Health"])
 async def health_check():
-    """Health check endpoint."""
     return {"status": "healthy", "service": settings.PROJECT_NAME}
 
 @app.get("/api", tags=["API"])
 async def api_root():
-    """API root endpoint."""
     return {
         "name": settings.PROJECT_NAME,
         "version": settings.PROJECT_VERSION,
@@ -57,9 +56,4 @@ async def api_root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=8000,
-        reload=settings.DEBUG,
-    )
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=settings.DEBUG)
