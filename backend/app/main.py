@@ -26,6 +26,7 @@ from app.api.deadlines import router as deadlines_router
 from app.api.documents import router as documents_router
 from app.api.training import router as training_router
 from app.api.medical import router as medical_router
+from app.api.dpi import router as dpi_router
 
 app.include_router(auth_router)
 app.include_router(companies_router)
@@ -34,6 +35,7 @@ app.include_router(deadlines_router)
 app.include_router(documents_router)
 app.include_router(training_router)
 app.include_router(medical_router)
+app.include_router(dpi_router)
 
 # CORS middleware
 app.add_middleware(
