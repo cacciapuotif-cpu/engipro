@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { auth, apiAuth, apiCompanies, apiWorkers, apiDeadlines, apiDocuments, apiTraining, apiMedical, apiDPI, apiAttendance } from "./api.js";
 
 const Icon = ({ d, size = 20, color = "currentColor", strokeWidth = 1.8 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
@@ -783,9 +784,97 @@ function AddModal({ view, onClose }) {
   );
 }
 
+// ─── Login Screen ────────────────────────────────────────────────────────────
+function LoginScreen({ onLogin }) {
+  const [email, setEmail] = useState("admin@engipro.it");
+  const [password, setPassword] = useState("Admin123!");
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const handleSubmit = async () => {
+    setLoading(true); setError(null);
+    try {
+      const res = await apiAuth.login(email, password);
+      auth.setToken(res.access_token);
+      onLogin();
+    } catch(e) { setError(e.message); }
+    finally { setLoading(false); }
+  };
+  return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117"}}>
+      <div style={{background:"#1a1d27",padding:"2.5rem",borderRadius:"16px",width:"360px",border:"1px solid #2a2d3e"}}>
+        <div style={{textAlign:"center",marginBottom:"2rem"}}>
+          <div style={{fontSize:"2rem",fontWeight:"800",color:"#fff"}}>Engi<span style={{color:"#6c63ff"}}>Pro</span></div>
+          <div style={{color:"#888",fontSize:"0.85rem",marginTop:"0.25rem"}}>Safety Platform</div>
+        </div>
+        {error && <div style={{background:"#ff4d4f22",border:"1px solid #ff4d4f",color:"#ff4d4f",padding:"0.75rem",borderRadius:"8px",marginBottom:"1rem",fontSize:"0.85rem"}}>{error}</div>}
+        <div style={{marginBottom:"1rem"}}>
+          <label style={{color:"#aaa",fontSize:"0.8rem",display:"block",marginBottom:"0.4rem"}}>Email</label>
+          <input value={email} onChange={e=>setEmail(e.target.value)} style={{width:"100%",background:"#0f1117",border:"1px solid #2a2d3e",borderRadius:"8px",padding:"0.65rem",color:"#fff",fontSize:"0.9rem",boxSizing:"border-box"}} />
+        </div>
+        <div style={{marginBottom:"1.5rem"}}>
+          <label style={{color:"#aaa",fontSize:"0.8rem",display:"block",marginBottom:"0.4rem"}}>Password</label>
+          <input type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} style={{width:"100%",background:"#0f1117",border:"1px solid #2a2d3e",borderRadius:"8px",padding:"0.65rem",color:"#fff",fontSize:"0.9rem",boxSizing:"border-box"}} />
+        </div>
+        <button onClick={handleSubmit} disabled={loading} style={{width:"100%",background:"#6c63ff",color:"#fff",border:"none",borderRadius:"8px",padding:"0.75rem",fontSize:"0.95rem",fontWeight:"600",cursor:"pointer"}}>
+          {loading ? "Accesso..." : "Accedi"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
+  const [loggedIn, setLoggedIn] = useState(auth.isLoggedIn());
   const [activeView, setActiveView] = useState("dashboard");
   const [showModal, setShowModal] = useState(false);
+  const [apiData, setApiData] = useState({ workers:[], companies:[], deadlines:[], documents:[], dpiItems:[], dpiAssignments:[], protocols:[], visits:[], courses:[], editions:[], participations:[], timbrature:[], records:[] });
+  const [loading, setLoading] = useState(false);
+
+  const loadData = useCallback(async () => {
+    if (!auth.isLoggedIn()) return;
+    setLoading(true);
+    try {
+      const [workers, companies, deadlines, documents, dpiItems, dpiAssignments, protocols, visits, courses, editions, participations, timbrature, records] = await Promise.allSettled([
+        apiWorkers.list(), apiCompanies.list(), apiDeadlines.list(), apiDocuments.list(),
+        apiDPI.items(), apiDPI.assignments(), apiMedical.protocols(), apiMedical.visits(),
+        apiTraining.courses(), apiTraining.editions(), apiTraining.participations(),
+        apiAttendance.timbrature(), apiAttendance.records()
+      ]);
+      setApiData({
+        workers:       workers.value?.items       || workers.value       || [],
+        companies:     companies.value?.items     || companies.value     || [],
+        deadlines:     deadlines.value?.items     || deadlines.value     || [],
+        documents:     documents.value?.items     || documents.value     || [],
+        dpiItems:      dpiItems.value?.items      || dpiItems.value      || [],
+        dpiAssignments:dpiAssignments.value?.items|| dpiAssignments.value|| [],
+        protocols:     protocols.value?.items     || protocols.value     || [],
+        visits:        visits.value?.items        || visits.value        || [],
+        courses:       courses.value?.items       || courses.value       || [],
+        editions:      editions.value?.items      || editions.value      || [],
+        participations:participations.value?.items|| participations.value|| [],
+        timbrature:    timbrature.value?.items    || timbrature.value    || [],
+        records:       records.value?.items       || records.value       || [],
+      });
+    } catch(e) { console.error('Load error:', e); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { if (loggedIn) loadData(); }, [loggedIn, loadData]);
+
+  if (!loggedIn) return <LoginScreen onLogin={() => setLoggedIn(true)} />;
+
+  const WORKERS = apiData.workers;
+  const COMPANIES = apiData.companies;
+  const DEADLINES = apiData.deadlines;
+  const DOCUMENTS = apiData.documents;
+  const DPI_ITEMS = apiData.dpiItems;
+  const MEDICAL_VISITS = apiData.visits;
+  const PROTOCOLS = apiData.protocols;
+  const COURSES = apiData.courses;
+  const PARTICIPATIONS = apiData.participations;
+  const TIMBRATURE = apiData.timbrature;
+  const ATTENDANCE_RECORDS = apiData.records;
+
   const alertCount = DEADLINES.filter(d=>d.stato==="ALERT"||d.stato==="EXPIRED").length;
   const navItems = [
     { id:"dashboard",  label:"Dashboard",  icon:Icons.dashboard,  section:"PRINCIPALE" },
