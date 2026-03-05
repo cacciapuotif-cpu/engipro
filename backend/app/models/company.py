@@ -31,6 +31,15 @@ class Company(Base):
     locations = relationship("Location", back_populates="company", cascade="all, delete-orphan")
     departments = relationship("Department", back_populates="company", cascade="all, delete-orphan")
     workers = relationship("Worker", back_populates="company", cascade="all, delete-orphan")
+    deadlines = relationship("Deadline", back_populates="company")
+    documents = relationship("Document", back_populates="company")
+    health_protocols = relationship("HealthProtocol", back_populates="company")
+    visite_mediche = relationship("MedicalVisit", back_populates="company")
+    courses = relationship("Course", back_populates="company")
+    dpi_items = relationship("DPIItem", back_populates="company")
+    dpi_assignments = relationship("DPIAssignment", back_populates="company")
+    timbrature = relationship("Timbratura", back_populates="company")
+    attendance_records = relationship("AttendanceRecord", back_populates="company")
     
     def __repr__(self) -> str:
         return f"<Company {self.ragione_sociale}>"
@@ -86,7 +95,7 @@ class Department(Base):
     
     # Relationships
     company = relationship("Company", back_populates="departments")
-    workers = relationship("Worker", back_populates="department")
+    workers = relationship("Worker", back_populates="department", foreign_keys="Worker.department_id")
     
     def __repr__(self) -> str:
         return f"<Department {self.nome}>"

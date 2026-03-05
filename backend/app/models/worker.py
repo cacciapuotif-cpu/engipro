@@ -69,9 +69,16 @@ class Worker(Base):
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
     
     # Relationships
+    deadlines = relationship("Deadline", back_populates="worker", foreign_keys="Deadline.worker_id")
+    documents = relationship("Document", back_populates="worker")
+    visite_mediche = relationship("MedicalVisit", back_populates="worker")
+    partecipazioni = relationship("CourseParticipation", back_populates="worker")
+    dpi_assignments = relationship("DPIAssignment", back_populates="worker")
+    timbrature = relationship("Timbratura", back_populates="worker")
+    attendance_records = relationship("AttendanceRecord", back_populates="worker")
     company = relationship("Company", back_populates="workers")
     location = relationship("Location", back_populates="workers")
-    department = relationship("Department", back_populates="workers")
+    department = relationship("Department", back_populates="workers", foreign_keys=[department_id])
     user = relationship("User", back_populates="worker", uselist=False)
     
     def __repr__(self) -> str:

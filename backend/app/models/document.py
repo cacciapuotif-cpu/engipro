@@ -61,7 +61,8 @@ class Document(Base):
     # Relationships
     company = relationship("Company", back_populates="documents")
     worker = relationship("Worker", back_populates="documents")
-    versioni_precedenti = relationship("Document", backref="documento_padre", foreign_keys=[documento_padre_id])
+    documento_padre = relationship("Document", foreign_keys=[documento_padre_id], remote_side="Document.id", back_populates="versioni_precedenti")
+    versioni_precedenti = relationship("Document", foreign_keys="Document.documento_padre_id", back_populates="documento_padre")
 
     def __repr__(self) -> str:
         return f"<Document {self.titolo} v{self.versione}>"
