@@ -1,7 +1,7 @@
 """
 Attendance API routes - timbrature e presenze.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import Path, APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import date

@@ -9,7 +9,7 @@ from app.models.worker import ContractType, WorkerStatus
 
 class WorkerBase(BaseModel):
     """Base worker schema."""
-    codice_fiscale: str = Field(regex=r"^[A-Z0-9]{16}$")
+    codice_fiscale: str = Field(pattern=r"^[A-Z0-9]{16}$")
     nome: str = Field(min_length=1, max_length=100)
     cognome: str = Field(min_length=1, max_length=100)
     data_nascita: date

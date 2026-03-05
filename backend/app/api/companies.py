@@ -1,7 +1,7 @@
 """
 Company management API routes.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import Path, APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user, require_role

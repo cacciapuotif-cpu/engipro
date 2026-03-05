@@ -2,7 +2,7 @@
 FastAPI dependencies for authentication and authorization.
 """
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthCredentials
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models import User, UserRole
@@ -13,7 +13,7 @@ security = HTTPBearer()
 
 async def get_current_user(
     db: Session = Depends(get_db),
-    credentials: HTTPAuthCredentials = Depends(security),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> User:
     """
     Get current authenticated user from JWT token.

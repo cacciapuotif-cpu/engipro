@@ -1,7 +1,7 @@
 """
 Worker management API routes.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import Path, APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user, require_role
@@ -46,7 +46,7 @@ async def create_worker(
 
 @router.get("", response_model=list[WorkerListResponse])
 async def list_workers(
-    company_id: int = Query(..., ge=1),
+    company_id: int = Path(..., ge=1),
     status: WorkerStatus = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
@@ -79,7 +79,7 @@ async def list_workers(
 
 @router.get("/search", response_model=list[WorkerListResponse])
 async def search_workers(
-    company_id: int = Query(..., ge=1),
+    company_id: int = Path(..., ge=1),
     q: str = Query(..., min_length=1),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -102,7 +102,7 @@ async def search_workers(
 
 @router.get("/{worker_id}", response_model=WorkerResponse)
 async def get_worker(
-    worker_id: int = Query(..., ge=1),
+    worker_id: int = Path(..., ge=1),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
@@ -237,7 +237,7 @@ async def change_worker_status(
 
 @router.get("/roles/rspp", response_model=list[WorkerListResponse])
 async def get_rspp_list(
-    company_id: int = Query(..., ge=1),
+    company_id: int = Path(..., ge=1),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
@@ -258,7 +258,7 @@ async def get_rspp_list(
 
 @router.get("/roles/rls", response_model=list[WorkerListResponse])
 async def get_rls_list(
-    company_id: int = Query(..., ge=1),
+    company_id: int = Path(..., ge=1),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):

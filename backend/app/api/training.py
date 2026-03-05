@@ -1,7 +1,7 @@
 """
 Training API routes - corsi, edizioni, partecipazioni.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import Path, APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import Optional
 from app.core.database import get_db

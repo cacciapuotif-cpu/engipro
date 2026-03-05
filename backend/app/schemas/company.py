@@ -9,8 +9,8 @@ from typing import Optional
 class CompanyBase(BaseModel):
     """Base company schema."""
     ragione_sociale: str
-    partita_iva: str = Field(regex=r"^\d{11}$")
-    codice_fiscale: str = Field(regex=r"^[A-Z0-9]{16}$")
+    partita_iva: str = Field(pattern=r"^\d{11}$")
+    codice_fiscale: str = Field(pattern=r"^[A-Z0-9]{16}$")
     codice_ateco: Optional[str] = None
     email: Optional[str] = None
     telefono: Optional[str] = None

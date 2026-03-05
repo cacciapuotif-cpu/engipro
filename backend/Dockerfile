@@ -2,20 +2,20 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Fix tmp permissions
+RUN chmod 1777 /tmp
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
-    postgresql-client \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
+# Copy and install Python dependencies
 COPY requirements.txt .
-
-# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
 
-# Run migrations and start server
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
