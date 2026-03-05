@@ -46,7 +46,7 @@ async def create_worker(
 
 @router.get("", response_model=list[WorkerListResponse])
 async def list_workers(
-    company_id: int = Path(..., ge=1),
+    company_id: int = Query(None, ge=1),
     status: WorkerStatus = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),

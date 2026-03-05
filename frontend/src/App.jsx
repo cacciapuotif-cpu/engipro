@@ -333,7 +333,11 @@ function DashboardView() {
 
 function WorkersView({ onAdd }) {
   const [search, setSearch] = useState("");
-  const filtered = WORKERS.filter(w=>w.nome.toLowerCase().includes(search.toLowerCase())||w.azienda.toLowerCase().includes(search.toLowerCase()));
+  const fullName = (w) => `${w.cognome || ""} ${w.nome || ""}`.trim();
+  const filtered = WORKERS.filter(w => {
+    const s = search.toLowerCase();
+    return fullName(w).toLowerCase().includes(s) || (w.mansione||"").toLowerCase().includes(s) || (w.codice_fiscale||"").toLowerCase().includes(s);
+  });
   return (
     <div>
       <div className="section-header">
@@ -344,21 +348,22 @@ function WorkersView({ onAdd }) {
         <div style={{marginBottom:"16px"}}>
           <div className="search-box" style={{width:"100%"}}>
             <Icon d={Icons.search} size={15} color="var(--c-muted)"/>
-            <input placeholder="Cerca lavoratore o azienda..." value={search} onChange={e=>setSearch(e.target.value)}/>
+            <input placeholder="Cerca per nome, mansione, CF..." value={search} onChange={e=>setSearch(e.target.value)}/>
           </div>
         </div>
+        {WORKERS.length === 0 && <div style={{textAlign:"center",padding:"2rem",color:"var(--c-muted)"}}>Nessun lavoratore. Clicca "Nuovo" per aggiungerne uno.</div>}
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Lavoratore</th><th>Ruolo</th><th>Azienda</th><th>Stato</th><th>DPI</th><th>Scad. VM</th></tr></thead>
+            <thead><tr><th>Lavoratore</th><th>Mansione</th><th>C.F.</th><th>Contratto</th><th>Stato</th><th>Assunzione</th></tr></thead>
             <tbody>
               {filtered.map(w=>(
                 <tr key={w.id}>
-                  <td><div style={{display:"flex",alignItems:"center",gap:"10px"}}><div className="avatar" style={{background:avatarColor(w.nome)}}>{initials(w.nome)}</div><span style={{fontWeight:600}}>{w.nome}</span></div></td>
-                  <td style={{color:"var(--c-muted)"}}>{w.ruolo}</td>
-                  <td>{w.azienda}</td>
-                  <td><Badge text={w.stato}/></td>
-                  <td><Badge text={w.dpi==="Completo"?"ACTIVE":"ALERT"}/></td>
-                  <td style={{color:new Date(w.scadenza_vm)<new Date()?"var(--c-red)":"var(--c-text)"}}>{w.scadenza_vm}</td>
+                  <td><div style={{display:"flex",alignItems:"center",gap:"10px"}}><div className="avatar" style={{background:avatarColor(fullName(w))}}>{initials(fullName(w))}</div><span style={{fontWeight:600}}>{fullName(w)}</span></div></td>
+                  <td style={{color:"var(--c-muted)"}}>{w.mansione}</td>
+                  <td style={{fontFamily:"monospace",fontSize:"0.8rem"}}>{w.codice_fiscale}</td>
+                  <td><Badge text={w.tipo_contratto||"FULL_TIME"}/></td>
+                  <td><Badge text={w.stato||"ACTIVE"}/></td>
+                  <td style={{color:"var(--c-muted)"}}>{w.data_assunzione}</td>
                 </tr>
               ))}
             </tbody>
@@ -372,7 +377,7 @@ function WorkersView({ onAdd }) {
 function DeadlinesView({ onAdd }) {
   const [filter, setFilter] = useState("ALL");
   const filters = ["ALL","ALERT","PENDING","EXPIRED","COMPLETED"];
-  const filtered = filter==="ALL" ? DEADLINES : DEADLINES.filter(d=>d.stato===filter);
+  const filtered = filter==="ALL" ? DEADLINES : DEADLINES.filter(d=>(d.stato||d.status||"PENDING")===filter);
   return (
     <div>
       <div className="section-header">
@@ -479,19 +484,20 @@ function CompaniesView({ onAdd }) {
         <div><div className="section-title">Aziende</div><div className="section-sub">{COMPANIES.length} aziende clienti</div></div>
         <button className="btn btn-primary" onClick={onAdd}><Icon d={Icons.plus} size={15} color="white"/>Nuova Azienda</button>
       </div>
+      {COMPANIES.length === 0 && <div className="card" style={{textAlign:"center",padding:"2rem",color:"var(--c-muted)"}}>Nessuna azienda. Clicca "Nuova Azienda" per aggiungerne una.</div>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:"16px"}}>
         {COMPANIES.map(c=>(
           <div key={c.id} className="card" style={{cursor:"pointer"}}>
             <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:"14px"}}>
               <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
-                <div className="avatar" style={{width:44,height:44,fontSize:16,background:avatarColor(c.nome),borderRadius:"12px"}}>{initials(c.nome)}</div>
-                <div><div style={{fontFamily:"var(--font-head)",fontWeight:800,fontSize:"16px"}}>{c.nome}</div><div style={{fontSize:"12px",color:"var(--c-muted)"}}>{c.settore}</div></div>
+                <div className="avatar" style={{width:44,height:44,fontSize:16,background:avatarColor(c.ragione_sociale||""),borderRadius:"12px"}}>{initials(c.ragione_sociale||"?")}</div>
+                <div><div style={{fontFamily:"var(--font-head)",fontWeight:800,fontSize:"16px"}}>{c.ragione_sociale}</div><div style={{fontSize:"12px",color:"var(--c-muted)"}}>{c.codice_ateco||"—"}</div></div>
               </div>
-              <Badge text={c.stato}/>
+              <Badge text={c.is_active?"ACTIVE":"INACTIVE"}/>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px"}}>
-              <div style={{background:"var(--c-surface2)",borderRadius:"8px",padding:"10px"}}><div style={{fontSize:"11px",color:"var(--c-muted)",marginBottom:"4px"}}>Lavoratori</div><div style={{fontFamily:"var(--font-head)",fontSize:"22px",fontWeight:800,color:"var(--c-teal)"}}>{c.lavoratori}</div></div>
-              <div style={{background:"var(--c-surface2)",borderRadius:"8px",padding:"10px"}}><div style={{fontSize:"11px",color:"var(--c-muted)",marginBottom:"4px"}}>P.IVA</div><div style={{fontFamily:"monospace",fontSize:"12px",color:"var(--c-muted)"}}>{c.piva}</div></div>
+              <div style={{background:"var(--c-surface2)",borderRadius:"8px",padding:"10px"}}><div style={{fontSize:"11px",color:"var(--c-muted)",marginBottom:"4px"}}>P.IVA</div><div style={{fontFamily:"monospace",fontSize:"12px",color:"var(--c-muted)"}}>{c.partita_iva}</div></div>
+              <div style={{background:"var(--c-surface2)",borderRadius:"8px",padding:"10px"}}><div style={{fontSize:"11px",color:"var(--c-muted)",marginBottom:"4px"}}>Email</div><div style={{fontSize:"12px",color:"var(--c-muted)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.email||"—"}</div></div>
             </div>
           </div>
         ))}
@@ -691,93 +697,156 @@ function AttendanceView({ onAdd }) {
   );
 }
 
-function AddModal({ view, onClose }) {
+function AddModal({ view, onClose, onSaved, data }) {
   const titles = { workers:"Nuovo Lavoratore", deadlines:"Nuova Scadenza", documents:"Carica Documento", dpi:"Nuovo DPI", companies:"Nuova Azienda", medical:"Nuova Visita", training:"Nuovo Corso", attendance:"Timbratura Manuale" };
+  const [form, setForm] = useState({});
+  const [file, setFile] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const handleSave = async () => {
+    setSaving(true); setError(null);
+    try {
+      if (view==="workers") {
+        if (!form.nome || !form.cognome || !form.codice_fiscale || !form.data_nascita || !form.mansione || !form.data_assunzione) { setError("Compila tutti i campi obbligatori (*)"); setSaving(false); return; }
+        if (form.codice_fiscale.length !== 16) { setError("Il Codice Fiscale deve essere di 16 caratteri"); setSaving(false); return; }
+        await apiWorkers.create({ nome:form.nome, cognome:form.cognome, mansione:form.mansione, codice_fiscale:form.codice_fiscale, data_nascita:form.data_nascita, luogo_nascita:form.luogo_nascita||null, data_assunzione:form.data_assunzione, tipo_contratto:form.tipo_contratto||"FULL_TIME", company_id:parseInt(form.company_id)||1, email:form.email||null, telefono:form.telefono||null, is_rspp:form.is_rspp||false, is_rls:form.is_rls||false, is_medico_competente:false });
+      } else if (view==="companies") {
+        if (!form.ragione_sociale) { setError("Inserisci la ragione sociale"); setSaving(false); return; }
+        const piva = (form.partita_iva||"").replace(/\D/g,"");
+        if (piva.length !== 11) { setError("La P.IVA deve essere di esattamente 11 cifre"); setSaving(false); return; }
+        const cf = (form.codice_fiscale||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+        if (cf.length !== 11 && cf.length !== 16) { setError("Il Codice Fiscale deve essere 11 cifre (aziende) o 16 caratteri (persone fisiche)"); setSaving(false); return; }
+        await apiCompanies.create({ ragione_sociale:form.ragione_sociale, partita_iva:piva, codice_fiscale:cf.length===11?cf.padEnd(16,"0"):cf, email:form.email||null, telefono:form.telefono||null, codice_ateco:form.codice_ateco||null });
+      } else if (view==="deadlines") {
+        await apiDeadlines.create({ titolo:form.titolo||"Nuova scadenza", tipo:form.tipo||"ALTRO", priorita:form.priorita||"MEDIUM", data_scadenza:form.data_scadenza||new Date().toISOString().split("T")[0], company_id:parseInt(form.company_id)||1, worker_id:form.worker_id?parseInt(form.worker_id):null, giorni_preavviso:parseInt(form.giorni_preavviso)||30 });
+      } else if (view==="dpi") {
+        await apiDPI.createItem({ codice:form.codice||"DPI-NEW", nome:form.nome, categoria:form.categoria||"ALTRO", marca:form.marca, data_acquisto:form.data_acquisto, data_scadenza:form.data_scadenza, costo:parseFloat(form.costo)||0, company_id:parseInt(form.company_id)||1 });
+      } else if (view==="medical") {
+        await apiMedical.createVisit({ worker_id:parseInt(form.worker_id)||1, company_id:parseInt(form.company_id)||1, tipo:form.tipo||"PERIODICA", data_visita:form.data_visita||new Date().toISOString().split("T")[0], medico:form.medico, struttura:form.struttura, data_prossima_visita:form.data_prossima_visita, note:form.note });
+      } else if (view==="training") {
+        await apiTraining.createCourse({ codice:form.codice||"FOR-NEW", titolo:form.titolo, tipo:form.tipo||"OBBLIGATORIO", durata_ore:parseFloat(form.durata_ore)||8, validita_anni:parseInt(form.validita_anni)||3, provider:form.provider, company_id:parseInt(form.company_id)||1 });
+      } else if (view==="attendance") {
+        await apiAttendance.createTimbratura({ worker_id:parseInt(form.worker_id)||1, company_id:parseInt(form.company_id)||1, tipo:form.tipo||"ENTRATA", metodo:form.metodo||"MANUALE", timestamp:form.timestamp||new Date().toISOString(), note:form.note });
+      } else if (view==="documents") {
+        if (!file) { setError("Seleziona un file da caricare"); setSaving(false); return; }
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("titolo", form.titolo||file.name);
+        fd.append("categoria", form.categoria||"ALTRO");
+        fd.append("company_id", form.company_id||"1");
+        if (form.worker_id) fd.append("worker_id", form.worker_id);
+        const token = (await import("./api.js")).auth.getToken();
+        const res = await fetch("/api/v1/documents/upload", { method:"POST", headers:{ Authorization:`Bearer ${token}` }, body:fd });
+        if (!res.ok) { const e = await res.json().catch(()=>({detail:"Errore upload"})); throw new Error(e.detail); }
+      }
+      onSaved();
+      onClose();
+    } catch(e) { setError(e.message); }
+    finally { setSaving(false); }
+  };
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e=>e.stopPropagation()}>
         <div className="modal-title">{titles[view]||"Nuovo"}</div>
         {view==="workers" && (
           <div className="form-grid">
-            <div className="form-group"><label>Nome</label><input placeholder="Mario"/></div>
-            <div className="form-group"><label>Cognome</label><input placeholder="Rossi"/></div>
-            <div className="form-group"><label>Ruolo</label><input placeholder="Operaio"/></div>
-            <div className="form-group"><label>Azienda</label><select>{COMPANIES.map(c=><option key={c.id}>{c.nome}</option>)}</select></div>
-            <div className="form-group"><label>Codice Fiscale</label><input placeholder="RSSMRA80A01H501Z"/></div>
-            <div className="form-group"><label>Data Assunzione</label><input type="date"/></div>
+            <div className="form-group"><label>Nome *</label><input placeholder="Mario" value={form.nome||""} onChange={e=>set("nome",e.target.value)}/></div>
+            <div className="form-group"><label>Cognome *</label><input placeholder="Rossi" value={form.cognome||""} onChange={e=>set("cognome",e.target.value)}/></div>
+            <div className="form-group"><label>Codice Fiscale *</label><input placeholder="RSSMRA80A01H501Z" maxLength={16} value={form.codice_fiscale||""} onChange={e=>set("codice_fiscale",e.target.value.toUpperCase())}/></div>
+            <div className="form-group"><label>Data Nascita *</label><input type="date" value={form.data_nascita||""} onChange={e=>set("data_nascita",e.target.value)}/></div>
+            <div className="form-group"><label>Luogo Nascita</label><input placeholder="Roma" value={form.luogo_nascita||""} onChange={e=>set("luogo_nascita",e.target.value)}/></div>
+            <div className="form-group"><label>Mansione *</label><input placeholder="Operaio" value={form.mansione||""} onChange={e=>set("mansione",e.target.value)}/></div>
+            <div className="form-group"><label>Azienda *</label><select value={form.company_id||""} onChange={e=>set("company_id",e.target.value)}><option value="">— Seleziona —</option>{data.companies.map(c=><option key={c.id} value={c.id}>{c.ragione_sociale}</option>)}</select></div>
+            <div className="form-group"><label>Contratto</label><select value={form.tipo_contratto||"FULL_TIME"} onChange={e=>set("tipo_contratto",e.target.value)}><option value="FULL_TIME">Tempo Pieno</option><option value="PART_TIME">Part Time</option><option value="TEMPORARY">Temporaneo</option><option value="APPRENTICE">Apprendistato</option><option value="PROJECT">Progetto</option></select></div>
+            <div className="form-group"><label>Data Assunzione *</label><input type="date" value={form.data_assunzione||""} onChange={e=>set("data_assunzione",e.target.value)}/></div>
+            <div className="form-group"><label>Email</label><input type="email" placeholder="mario.rossi@email.it" value={form.email||""} onChange={e=>set("email",e.target.value)}/></div>
+            <div className="form-group"><label>Telefono</label><input placeholder="+39 333 1234567" value={form.telefono||""} onChange={e=>set("telefono",e.target.value)}/></div>
+            <div className="form-group"><label>RSPP</label><select value={form.is_rspp||"false"} onChange={e=>set("is_rspp",e.target.value==="true")}><option value="false">No</option><option value="true">Sì</option></select></div>
+            <div className="form-group"><label>RLS</label><select value={form.is_rls||"false"} onChange={e=>set("is_rls",e.target.value==="true")}><option value="false">No</option><option value="true">Sì</option></select></div>
           </div>
         )}
         {view==="deadlines" && (
           <div className="form-grid">
-            <div className="form-group"><label>Tipo</label><select><option>FORMAZIONE</option><option>VISITA_MEDICA</option><option>MANUTENZIONE</option></select></div>
-            <div className="form-group"><label>Priorità</label><select><option>LOW</option><option>MEDIUM</option><option>HIGH</option></select></div>
-            <div className="form-group full"><label>Descrizione</label><input placeholder="Descrizione scadenza..."/></div>
-            <div className="form-group"><label>Lavoratore</label><select><option>—</option>{WORKERS.map(w=><option key={w.id}>{w.nome}</option>)}</select></div>
-            <div className="form-group"><label>Data Scadenza</label><input type="date"/></div>
+            <div className="form-group full"><label>Titolo *</label><input placeholder="Descrizione scadenza..." value={form.titolo||""} onChange={e=>set("titolo",e.target.value)}/></div>
+            <div className="form-group"><label>Tipo</label><select value={form.tipo||"ALTRO"} onChange={e=>set("tipo",e.target.value)}><option value="FORMAZIONE">Formazione</option><option value="VISITA_MEDICA">Visita Medica</option><option value="MANUTENZIONE_ATTREZZATURA">Manutenzione</option><option value="RINNOVO_DOCUMENTO">Rinnovo Documento</option><option value="SOSTITUZIONE_DPI">Sostituzione DPI</option><option value="ALTRO">Altro</option></select></div>
+            <div className="form-group"><label>Priorità</label><select value={form.priorita||"MEDIUM"} onChange={e=>set("priorita",e.target.value)}><option value="LOW">Bassa</option><option value="MEDIUM">Media</option><option value="HIGH">Alta</option></select></div>
+            <div className="form-group"><label>Azienda</label><select value={form.company_id||""} onChange={e=>set("company_id",e.target.value)}><option value="">— Seleziona —</option>{data.companies.map(c=><option key={c.id} value={c.id}>{c.ragione_sociale}</option>)}</select></div>
+            <div className="form-group"><label>Lavoratore</label><select value={form.worker_id||""} onChange={e=>set("worker_id",e.target.value)}><option value="">— Tutti —</option>{data.workers.map(w=><option key={w.id} value={w.id}>{w.cognome} {w.nome}</option>)}</select></div>
+            <div className="form-group"><label>Data Scadenza *</label><input type="date" value={form.data_scadenza||""} onChange={e=>set("data_scadenza",e.target.value)}/></div>
+            <div className="form-group"><label>Giorni Preavviso</label><input type="number" min={1} value={form.giorni_preavviso||30} onChange={e=>set("giorni_preavviso",e.target.value)}/></div>
           </div>
         )}
         {view==="documents" && (
           <div className="form-grid">
-            <div className="form-group full"><label>Titolo</label><input placeholder="Titolo documento"/></div>
-            <div className="form-group"><label>Categoria</label><select><option>SICUREZZA</option><option>FORMAZIONE</option><option>MEDICINA</option><option>CONTRATTO</option><option>DPI</option></select></div>
-            <div className="form-group"><label>Azienda</label><select>{COMPANIES.map(c=><option key={c.id}>{c.nome}</option>)}</select></div>
-            <div className="form-group"><label>Data Emissione</label><input type="date"/></div>
-            <div className="form-group"><label>Data Scadenza</label><input type="date"/></div>
+            <div className="form-group full"><label>File *</label><input type="file" onChange={e=>setFile(e.target.files[0])} style={{background:"#0f1117",border:"1px solid #2a2d3e",borderRadius:"8px",padding:"0.5rem",color:"#fff",width:"100%",boxSizing:"border-box"}}/></div>
+            <div className="form-group full"><label>Titolo</label><input placeholder="Titolo documento (opzionale)" value={form.titolo||""} onChange={e=>set("titolo",e.target.value)}/></div>
+            <div className="form-group"><label>Categoria</label><select value={form.categoria||"ALTRO"} onChange={e=>set("categoria",e.target.value)}><option value="SICUREZZA">Sicurezza</option><option value="FORMAZIONE">Formazione</option><option value="MEDICINA">Medicina</option><option value="CONTRATTO">Contratto</option><option value="DPI">DPI</option><option value="ALTRO">Altro</option></select></div>
+            <div className="form-group"><label>Azienda</label><select value={form.company_id||""} onChange={e=>set("company_id",e.target.value)}><option value="">— Seleziona —</option>{data.companies.map(c=><option key={c.id} value={c.id}>{c.ragione_sociale}</option>)}</select></div>
+            <div className="form-group"><label>Lavoratore</label><select value={form.worker_id||""} onChange={e=>set("worker_id",e.target.value)}><option value="">— Nessuno —</option>{data.workers.map(w=><option key={w.id} value={w.id}>{w.cognome} {w.nome}</option>)}</select></div>
           </div>
         )}
         {view==="dpi" && (
           <div className="form-grid">
-            <div className="form-group"><label>Codice</label><input placeholder="DPI-006"/></div>
-            <div className="form-group"><label>Nome</label><input placeholder="Nome dispositivo"/></div>
-            <div className="form-group"><label>Categoria</label><select><option>TESTA</option><option>OCCHI_VISO</option><option>UDITO</option><option>MANI_BRACCIA</option><option>PIEDI_GAMBE</option><option>ANTICADUTA</option></select></div>
-            <div className="form-group"><label>Marca</label><input placeholder="3M, Honeywell..."/></div>
-            <div className="form-group"><label>Data Acquisto</label><input type="date"/></div>
-            <div className="form-group"><label>Data Scadenza</label><input type="date"/></div>
+            <div className="form-group"><label>Codice *</label><input placeholder="DPI-006" value={form.codice||""} onChange={e=>set("codice",e.target.value)}/></div>
+            <div className="form-group"><label>Nome *</label><input placeholder="Nome dispositivo" value={form.nome||""} onChange={e=>set("nome",e.target.value)}/></div>
+            <div className="form-group"><label>Categoria</label><select value={form.categoria||"ALTRO"} onChange={e=>set("categoria",e.target.value)}><option value="TESTA">Testa</option><option value="OCCHI_VISO">Occhi/Viso</option><option value="UDITO">Udito</option><option value="VIE_RESPIRATORIE">Vie Respiratorie</option><option value="MANI_BRACCIA">Mani/Braccia</option><option value="PIEDI_GAMBE">Piedi/Gambe</option><option value="CORPO">Corpo</option><option value="ANTICADUTA">Anticaduta</option><option value="ALTRO">Altro</option></select></div>
+            <div className="form-group"><label>Azienda</label><select value={form.company_id||""} onChange={e=>set("company_id",e.target.value)}><option value="">— Seleziona —</option>{data.companies.map(c=><option key={c.id} value={c.id}>{c.ragione_sociale}</option>)}</select></div>
+            <div className="form-group"><label>Marca</label><input placeholder="3M, Honeywell..." value={form.marca||""} onChange={e=>set("marca",e.target.value)}/></div>
+            <div className="form-group"><label>Costo (€)</label><input type="number" min={0} value={form.costo||""} onChange={e=>set("costo",e.target.value)}/></div>
+            <div className="form-group"><label>Data Acquisto</label><input type="date" value={form.data_acquisto||""} onChange={e=>set("data_acquisto",e.target.value)}/></div>
+            <div className="form-group"><label>Data Scadenza</label><input type="date" value={form.data_scadenza||""} onChange={e=>set("data_scadenza",e.target.value)}/></div>
           </div>
         )}
         {view==="companies" && (
           <div className="form-grid">
-            <div className="form-group full"><label>Ragione Sociale</label><input placeholder="Nome Azienda SRL"/></div>
-            <div className="form-group"><label>P.IVA</label><input placeholder="01234567890"/></div>
-            <div className="form-group"><label>Settore</label><input placeholder="Edilizia, Logistica..."/></div>
-            <div className="form-group"><label>Email</label><input type="email" placeholder="info@azienda.it"/></div>
-            <div className="form-group"><label>Telefono</label><input placeholder="+39 02 1234567"/></div>
-            <div className="form-group"><label>Città</label><input placeholder="Milano"/></div>
+            <div className="form-group full"><label>Ragione Sociale *</label><input placeholder="Nome Azienda SRL" value={form.ragione_sociale||""} onChange={e=>set("ragione_sociale",e.target.value)}/></div>
+            <div className="form-group"><label>P.IVA * (11 cifre)</label><input placeholder="01234567890" maxLength={11} value={form.partita_iva||""} onChange={e=>set("partita_iva",e.target.value.replace(/\D/g,""))}/></div>
+            <div className="form-group"><label>Codice Fiscale * (11 o 16 car.)</label><input placeholder="01234567890 oppure RSSMRA80A01H501Z" maxLength={16} value={form.codice_fiscale||""} onChange={e=>set("codice_fiscale",e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,""))}/></div>
+            <div className="form-group"><label>Email</label><input type="email" placeholder="info@azienda.it" value={form.email||""} onChange={e=>set("email",e.target.value)}/></div>
+            <div className="form-group"><label>Telefono</label><input placeholder="+39 02 1234567" value={form.telefono||""} onChange={e=>set("telefono",e.target.value)}/></div>
+            <div className="form-group"><label>Codice ATECO</label><input placeholder="41.20.00" value={form.codice_ateco||""} onChange={e=>set("codice_ateco",e.target.value)}/></div>
+            <div className="form-group full" style={{fontSize:"0.75rem",color:"var(--c-muted)",padding:"0.5rem",background:"#ffffff08",borderRadius:"6px"}}>💡 Per aziende: P.IVA = Codice Fiscale (11 cifre). Per ditte individuali: CF = 16 caratteri del titolare.</div>
           </div>
         )}
         {view==="medical" && (
           <div className="form-grid">
-            <div className="form-group"><label>Lavoratore</label><select>{WORKERS.map(w=><option key={w.id}>{w.nome}</option>)}</select></div>
-            <div className="form-group"><label>Tipo Visita</label><select><option>PREVENTIVA</option><option>PERIODICA</option><option>REINTEGRO</option><option>CAMBIO_MANSIONE</option><option>CESSAZIONE</option></select></div>
-            <div className="form-group"><label>Data Visita</label><input type="date"/></div>
-            <div className="form-group"><label>Medico</label><input placeholder="Dr. Bianchi"/></div>
-            <div className="form-group"><label>Struttura</label><input placeholder="Nome clinica/studio"/></div>
-            <div className="form-group"><label>Prossima Visita</label><input type="date"/></div>
-            <div className="form-group full"><label>Note</label><textarea rows={2} placeholder="Note aggiuntive..."/></div>
+            <div className="form-group"><label>Lavoratore *</label><select value={form.worker_id||""} onChange={e=>set("worker_id",e.target.value)}><option value="">— Seleziona —</option>{data.workers.map(w=><option key={w.id} value={w.id}>{w.cognome} {w.nome}</option>)}</select></div>
+            <div className="form-group"><label>Azienda</label><select value={form.company_id||""} onChange={e=>set("company_id",e.target.value)}><option value="">— Seleziona —</option>{data.companies.map(c=><option key={c.id} value={c.id}>{c.ragione_sociale}</option>)}</select></div>
+            <div className="form-group"><label>Tipo Visita</label><select value={form.tipo||"PERIODICA"} onChange={e=>set("tipo",e.target.value)}><option value="PREVENTIVA">Preventiva</option><option value="PERIODICA">Periodica</option><option value="REINTEGRO">Reintegro</option><option value="CAMBIO_MANSIONE">Cambio Mansione</option><option value="CESSAZIONE">Cessazione</option><option value="STRAORDINARIA">Straordinaria</option></select></div>
+            <div className="form-group"><label>Data Visita *</label><input type="date" value={form.data_visita||""} onChange={e=>set("data_visita",e.target.value)}/></div>
+            <div className="form-group"><label>Medico</label><input placeholder="Dr. Bianchi" value={form.medico||""} onChange={e=>set("medico",e.target.value)}/></div>
+            <div className="form-group"><label>Struttura</label><input placeholder="Nome clinica/studio" value={form.struttura||""} onChange={e=>set("struttura",e.target.value)}/></div>
+            <div className="form-group"><label>Prossima Visita</label><input type="date" value={form.data_prossima_visita||""} onChange={e=>set("data_prossima_visita",e.target.value)}/></div>
+            <div className="form-group full"><label>Note</label><textarea rows={2} placeholder="Note aggiuntive..." value={form.note||""} onChange={e=>set("note",e.target.value)}/></div>
           </div>
         )}
         {view==="training" && (
           <div className="form-grid">
-            <div className="form-group"><label>Codice</label><input placeholder="FOR-006"/></div>
-            <div className="form-group"><label>Titolo</label><input placeholder="Nome corso"/></div>
-            <div className="form-group"><label>Tipo</label><select><option>OBBLIGATORIO</option><option>FACOLTATIVO</option><option>AGGIORNAMENTO</option></select></div>
-            <div className="form-group"><label>Durata (ore)</label><input type="number" defaultValue={8} min={1}/></div>
-            <div className="form-group"><label>Provider</label><input placeholder="Ente erogatore"/></div>
-            <div className="form-group"><label>Validità (anni)</label><input type="number" defaultValue={3} min={1}/></div>
+            <div className="form-group"><label>Codice *</label><input placeholder="FOR-006" value={form.codice||""} onChange={e=>set("codice",e.target.value)}/></div>
+            <div className="form-group"><label>Titolo *</label><input placeholder="Nome corso" value={form.titolo||""} onChange={e=>set("titolo",e.target.value)}/></div>
+            <div className="form-group"><label>Tipo</label><select value={form.tipo||"OBBLIGATORIO"} onChange={e=>set("tipo",e.target.value)}><option value="OBBLIGATORIO">Obbligatorio</option><option value="FACOLTATIVO">Facoltativo</option><option value="AGGIORNAMENTO">Aggiornamento</option></select></div>
+            <div className="form-group"><label>Azienda</label><select value={form.company_id||""} onChange={e=>set("company_id",e.target.value)}><option value="">— Seleziona —</option>{data.companies.map(c=><option key={c.id} value={c.id}>{c.ragione_sociale}</option>)}</select></div>
+            <div className="form-group"><label>Durata (ore)</label><input type="number" min={1} value={form.durata_ore||8} onChange={e=>set("durata_ore",e.target.value)}/></div>
+            <div className="form-group"><label>Validità (anni)</label><input type="number" min={1} value={form.validita_anni||3} onChange={e=>set("validita_anni",e.target.value)}/></div>
+            <div className="form-group full"><label>Provider</label><input placeholder="Ente erogatore" value={form.provider||""} onChange={e=>set("provider",e.target.value)}/></div>
           </div>
         )}
         {view==="attendance" && (
           <div className="form-grid">
-            <div className="form-group"><label>Lavoratore</label><select>{WORKERS.map(w=><option key={w.id}>{w.nome}</option>)}</select></div>
-            <div className="form-group"><label>Tipo</label><select><option>ENTRATA</option><option>USCITA</option><option>PAUSA_INIZIO</option><option>PAUSA_FINE</option></select></div>
-            <div className="form-group"><label>Data e Ora</label><input type="datetime-local"/></div>
-            <div className="form-group"><label>Metodo</label><select><option>MANUALE</option><option>GPS</option><option>NFC</option><option>QR_CODE</option></select></div>
-            <div className="form-group full"><label>Note</label><input placeholder="Motivazione timbratura manuale..."/></div>
+            <div className="form-group"><label>Lavoratore *</label><select value={form.worker_id||""} onChange={e=>set("worker_id",e.target.value)}><option value="">— Seleziona —</option>{data.workers.map(w=><option key={w.id} value={w.id}>{w.cognome} {w.nome}</option>)}</select></div>
+            <div className="form-group"><label>Azienda</label><select value={form.company_id||""} onChange={e=>set("company_id",e.target.value)}><option value="">— Seleziona —</option>{data.companies.map(c=><option key={c.id} value={c.id}>{c.ragione_sociale}</option>)}</select></div>
+            <div className="form-group"><label>Tipo</label><select value={form.tipo||"ENTRATA"} onChange={e=>set("tipo",e.target.value)}><option value="ENTRATA">Entrata</option><option value="USCITA">Uscita</option><option value="PAUSA_INIZIO">Pausa Inizio</option><option value="PAUSA_FINE">Pausa Fine</option></select></div>
+            <div className="form-group"><label>Metodo</label><select value={form.metodo||"MANUALE"} onChange={e=>set("metodo",e.target.value)}><option value="MANUALE">Manuale</option><option value="GPS">GPS</option><option value="NFC">NFC</option><option value="QR_CODE">QR Code</option></select></div>
+            <div className="form-group"><label>Data e Ora *</label><input type="datetime-local" value={form.timestamp||""} onChange={e=>set("timestamp",new Date(e.target.value).toISOString())}/></div>
+            <div className="form-group full"><label>Note</label><input placeholder="Motivazione timbratura manuale..." value={form.note||""} onChange={e=>set("note",e.target.value)}/></div>
           </div>
         )}
+        {error && <div style={{color:"#ff4d4f",fontSize:"0.8rem",marginBottom:"0.5rem",padding:"0.5rem",background:"#ff4d4f11",borderRadius:"6px"}}>{error}</div>}
         <div className="modal-actions">
           <button className="btn btn-ghost" onClick={onClose}>Annulla</button>
-          <button className="btn btn-primary" onClick={onClose}><Icon d={Icons.check} size={14} color="white"/>Salva</button>
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving}><Icon d={Icons.check} size={14} color="white"/>{saving?"Salvataggio...":"Salva"}</button>
         </div>
       </div>
     </div>
@@ -829,37 +898,46 @@ export default function App() {
   const [showModal, setShowModal] = useState(false);
   const [apiData, setApiData] = useState({ workers:[], companies:[], deadlines:[], documents:[], dpiItems:[], dpiAssignments:[], protocols:[], visits:[], courses:[], editions:[], participations:[], timbrature:[], records:[] });
   const [loading, setLoading] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
+  const refresh = () => setRefreshTick(t => t+1);
 
   const loadData = useCallback(async () => {
     if (!auth.isLoggedIn()) return;
     setLoading(true);
     try {
-      const [workers, companies, deadlines, documents, dpiItems, dpiAssignments, protocols, visits, courses, editions, participations, timbrature, records] = await Promise.allSettled([
+      const norm = (r) => {
+        if (!r || r.status === 'rejected') return [];
+        const v = r.value;
+        if (!v) return [];
+        if (Array.isArray(v)) return v;
+        if (v.items) return v.items;
+        return [];
+      };
+      const [workers, companies, deadlines, documents, dpiItems, protocols, visits, courses, records] = await Promise.allSettled([
         apiWorkers.list(), apiCompanies.list(), apiDeadlines.list(), apiDocuments.list(),
-        apiDPI.items(), apiDPI.assignments(), apiMedical.protocols(), apiMedical.visits(),
-        apiTraining.courses(), apiTraining.editions(), apiTraining.participations(),
-        apiAttendance.timbrature(), apiAttendance.records()
+        apiDPI.items(), apiMedical.protocols(), apiMedical.visits(),
+        apiTraining.courses(), apiAttendance.records()
       ]);
       setApiData({
-        workers:       workers.value?.items       || workers.value       || [],
-        companies:     companies.value?.items     || companies.value     || [],
-        deadlines:     deadlines.value?.items     || deadlines.value     || [],
-        documents:     documents.value?.items     || documents.value     || [],
-        dpiItems:      dpiItems.value?.items      || dpiItems.value      || [],
-        dpiAssignments:dpiAssignments.value?.items|| dpiAssignments.value|| [],
-        protocols:     protocols.value?.items     || protocols.value     || [],
-        visits:        visits.value?.items        || visits.value        || [],
-        courses:       courses.value?.items       || courses.value       || [],
-        editions:      editions.value?.items      || editions.value      || [],
-        participations:participations.value?.items|| participations.value|| [],
-        timbrature:    timbrature.value?.items    || timbrature.value    || [],
-        records:       records.value?.items       || records.value       || [],
+        workers:       norm(workers),
+        companies:     norm(companies),
+        deadlines:     norm(deadlines),
+        documents:     norm(documents),
+        dpiItems:      norm(dpiItems),
+        dpiAssignments:[],
+        protocols:     norm(protocols),
+        visits:        norm(visits),
+        courses:       norm(courses),
+        editions:      [],
+        participations:[],
+        timbrature:    [],
+        records:       norm(records),
       });
     } catch(e) { console.error('Load error:', e); }
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { if (loggedIn) loadData(); }, [loggedIn, loadData]);
+  useEffect(() => { if (loggedIn) loadData(); }, [loggedIn, loadData, refreshTick]);
 
   if (!loggedIn) return <LoginScreen onLogin={() => setLoggedIn(true)} />;
 
@@ -938,7 +1016,7 @@ export default function App() {
           </div>
         </main>
       </div>
-      {showModal && <AddModal view={activeView} onClose={()=>setShowModal(false)}/>}
+      {showModal && <AddModal view={activeView} onClose={()=>setShowModal(false)} onSaved={refresh} data={apiData}/>}
     </>
   );
 }

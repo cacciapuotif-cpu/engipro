@@ -1,9 +1,10 @@
 """
 Documents API routes.
 """
-from fastapi import Path, APIRouter, Depends, HTTPException, status, Query
+from fastapi import Path, APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import Optional
+import os, uuid
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user
 from app.models import User
@@ -12,6 +13,41 @@ from app.schemas.document import DocumentCreate, DocumentUpdate, DocumentRespons
 from app.services.document import DocumentService
 
 router = APIRouter(prefix="/api/v1/documents", tags=["Documents"])
+
+@router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+async def upload_document(
+    file: UploadFile = File(...),
+    titolo: str = Form(None),
+    categoria: str = Form("ALTRO"),
+    company_id: int = Form(...),
+    worker_id: Optional[int] = Form(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Carica un documento (multipart upload)."""
+    content_bytes = await file.read()
+    ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else "bin"
+    storage_key = f"companies/{company_id}/documents/{uuid.uuid4()}.{ext}"
+    
+    # Salva su filesystem locale (in /app/uploads)
+    upload_dir = f"/app/uploads/companies/{company_id}/documents"
+    os.makedirs(upload_dir, exist_ok=True)
+    local_path = f"{upload_dir}/{storage_key.split('/')[-1]}"
+    with open(local_path, "wb") as f:
+        f.write(content_bytes)
+    
+    from app.schemas.document import DocumentCreate
+    doc_data = DocumentCreate(
+        company_id=company_id,
+        worker_id=worker_id,
+        titolo=titolo or file.filename,
+        categoria=categoria,
+        storage_key=storage_key,
+        filename_originale=file.filename,
+        mime_type=file.content_type or "application/octet-stream",
+        dimensione_bytes=len(content_bytes),
+    )
+    return DocumentService.create(db, doc_data, user_id=current_user.id)
 
 
 @router.post("", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
