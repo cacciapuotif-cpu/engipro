@@ -38,6 +38,57 @@ async def list_deadlines(
     return DeadlineService.get_all(db, company_id, worker_id, stato, skip, limit)
 
 
+@router.get("/alerts/upcoming", response_model=list[DeadlineResponse])
+async def get_upcoming_alerts(
+    days: int = Query(7, ge=1, le=365),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Ritorna scadenze imminenti entro N giorni.
+    
+    Args:
+        days: Numero di giorni di preavviso (default 7)
+    
+    Returns:
+        Lista ordinata di scadenze imminenti
+    """
+    return DeadlineService.get_upcoming_alerts(db, current_user.company_id, days)
+
+
+@router.get("/alerts/expired", response_model=list[DeadlineResponse])
+async def get_expired_alerts(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Ritorna scadenze scadute non completate.
+    
+    Returns:
+        Lista ordinata di scadenze scadute
+    """
+    return DeadlineService.get_expired(db, current_user.company_id)
+
+
+@router.get("/dashboard/summary")
+async def get_dashboard_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Ritorna riepilogo per dashboard.
+    
+    Returns:
+        {
+            "total_pending": int,
+            "expired_count": int,
+            "alert_count": int,
+            "by_priority": {"HIGH": int, "MEDIUM": int, "LOW": int}
+        }
+    """
+    return DeadlineService.get_dashboard_summary(db, current_user.company_id)
+
+
 @router.get("/{deadline_id}", response_model=DeadlineResponse)
 async def get_deadline(
     deadline_id: int,
