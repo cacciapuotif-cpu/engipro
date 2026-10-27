@@ -436,7 +436,7 @@ function CompaniesView({ companies, onAdd }) {
         <button className="btn btn-primary" onClick={onAdd}><Icon d={Icons.plus} size={15} color="white"/>Nuova Azienda</button>
       </div>
       {companies.length === 0
-        ? <div className="card"><EmptyState message="Nessuna azienda. Clicca \"Nuova Azienda\" per aggiungerne una." /></div>
+        ? <div className="card"><EmptyState message='Nessuna azienda. Clicca "Nuova Azienda" per aggiungerne una.' /></div>
         : (
         <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:"16px"}}>
           {companies.map(c=>(
