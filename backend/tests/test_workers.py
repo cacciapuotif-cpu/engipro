@@ -52,7 +52,8 @@ def admin_user(db=None):
     )
     db.add(company)
     db.commit()
-    
+    company_id = company.id  # read before session closes
+
     # Create admin user
     user = User(
         email="admin@example.com",
@@ -74,7 +75,7 @@ def admin_user(db=None):
     )
     token = login_response.json()["access_token"]
     
-    return token, company.id
+    return token, company_id
 
 
 def test_create_worker(admin_user):
@@ -147,12 +148,12 @@ def test_list_workers(admin_user):
     
     # Create multiple workers
     for i in range(3):
-        client.post(
+        created = client.post(
             "/api/v1/workers",
             headers={"Authorization": f"Bearer {token}"},
             json={
                 "company_id": company_id,
-                "codice_fiscale": f"CF{'0000000' + str(i)}",
+                "codice_fiscale": f"TSTWRK90A01H50{i}Z",
                 "nome": f"Worker{i}",
                 "cognome": "Test",
                 "data_nascita": "1990-01-01",
@@ -161,6 +162,7 @@ def test_list_workers(admin_user):
                 "data_assunzione": "2023-01-15",
             },
         )
+        assert created.status_code == 201, created.text
     
     # List workers
     response = client.get(
