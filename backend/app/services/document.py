@@ -88,6 +88,9 @@ class DocumentService:
     @staticmethod
     def get_versions(db: Session, document_id: int) -> list[Document]:
         doc = DocumentService.get_by_id(db, document_id)
+        root_id = doc.documento_padre_id or doc.id
         return db.query(Document).filter(
-            Document.documento_padre_id == doc.documento_padre_id or Document.id == document_id
+            Document.company_id == doc.company_id,
+            Document.is_active == True,
+            (Document.documento_padre_id == root_id) | (Document.id == root_id)
         ).order_by(Document.versione.desc()).all()

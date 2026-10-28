@@ -23,7 +23,7 @@ def api_db() -> Iterator[Session]:
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
     with Session(engine) as db:
-        db.add(Company(id=1, ragione_sociale="A", partita_iva="12345678901", codice_fiscale="12345678901"))
+        db.add(Company(id=1, ragione_sociale="A", partita_iva="12345678901", codice_fiscale="AAAAAAAAAAAAAAAA"))
         db.add(User(id=1, email="admin@example.com", hashed_password="unused", role=UserRole.ADMIN))
         db.commit()
         yield db

@@ -4,6 +4,8 @@ Company management API routes.
 from fastapi import Path, APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.core.dependencies import get_company_scope
+from app.core.tenancy import require_resource, validate_write, owner_id
 from app.core.dependencies import get_current_active_user, require_role
 from app.models import User, UserRole
 from app.schemas.company import (
@@ -20,6 +22,7 @@ router = APIRouter(prefix="/api/v1/companies", tags=["Companies"])
 @router.post("", response_model=CompanyResponse, status_code=status.HTTP_201_CREATED)
 async def create_company(
     company_data: CompanyCreate,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(UserRole.ADMIN)),
 ):
@@ -34,6 +37,7 @@ async def create_company(
     Returns:
         Created company
     """
+    validate_write(db, company_data.model_dump(exclude_unset=True), scope, None)
     try:
         company = CompanyService.create(db, company_data)
         return company
@@ -48,6 +52,7 @@ async def create_company(
 async def list_companies(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
@@ -63,6 +68,8 @@ async def list_companies(
     Returns:
         List of companies
     """
+    if scope is not None:
+        return [CompanyService.get_by_id(db, scope)][skip:skip + limit]
     companies = CompanyService.get_all(db, skip, limit)
     return companies
 
@@ -70,6 +77,7 @@ async def list_companies(
 @router.get("/{company_id}", response_model=CompanyResponse)
 async def get_company(
     company_id: int,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
@@ -84,6 +92,7 @@ async def get_company(
     Returns:
         Company data
     """
+    resource = require_resource(db, "company_id", company_id, scope)
     try:
         company = CompanyService.get_by_id(db, company_id)
         return company
@@ -98,6 +107,7 @@ async def get_company(
 async def update_company(
     company_id: int,
     company_data: CompanyUpdate,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.COMPANY_ADMIN)),
 ):
@@ -113,6 +123,8 @@ async def update_company(
     Returns:
         Updated company
     """
+    resource = require_resource(db, "company_id", company_id, scope)
+    validate_write(db, company_data.model_dump(exclude_unset=True), scope, owner_id(db, resource))
     try:
         company = CompanyService.update(db, company_id, company_data)
         return company
@@ -126,6 +138,7 @@ async def update_company(
 @router.delete("/{company_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_company(
     company_id: int,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(UserRole.ADMIN)),
 ):
@@ -137,6 +150,7 @@ async def delete_company(
         db: Database session
         current_user: Current authenticated user
     """
+    resource = require_resource(db, "company_id", company_id, scope)
     try:
         CompanyService.delete(db, company_id)
     except ValueError as e:
@@ -149,6 +163,7 @@ async def delete_company(
 @router.get("/{company_id}/stats", response_model=CompanyStatsResponse)
 async def get_company_stats(
     company_id: int,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
@@ -163,6 +178,7 @@ async def get_company_stats(
     Returns:
         Company statistics
     """
+    resource = require_resource(db, "company_id", company_id, scope)
     try:
         stats = CompanyService.get_stats(db, company_id)
         return stats

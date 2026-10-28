@@ -12,6 +12,8 @@ from app.core.storage import MinIOStorage, get_storage
 
 logger = logging.getLogger(__name__)
 from app.core.database import get_db
+from app.core.dependencies import get_company_scope
+from app.core.tenancy import require_resource, validate_write, owner_id
 from app.core.dependencies import get_current_active_user
 from app.models import User
 from app.models.document import DocumentCategory, DocumentStatus
@@ -27,11 +29,13 @@ async def upload_document(
     categoria: DocumentCategory = Form(DocumentCategory.ALTRO),
     company_id: int = Form(...),
     worker_id: Optional[int] = Form(None),
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     storage: MinIOStorage = Depends(get_storage),
 ) -> DocumentResponse:
     """Validate and upload a document to object storage."""
+    validate_write(db, {"company_id": company_id, "worker_id": worker_id}, scope)
     allowed = {
         "application/pdf": "pdf", "image/jpeg": "jpg", "image/png": "png",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
@@ -59,10 +63,12 @@ async def upload_document(
 @router.get("/{document_id}/download")
 async def download_document(
     document_id: int,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     storage: MinIOStorage = Depends(get_storage),
 ) -> RedirectResponse:
+    resource = require_resource(db, "document_id", document_id, scope)
     try:
         document = DocumentService.get_by_id(db, document_id)
     except ValueError as exc:
@@ -78,10 +84,12 @@ async def download_document(
 @router.post("", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 async def create_document(
     data: DocumentCreate,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """Crea un nuovo documento."""
+    validate_write(db, data.model_dump(exclude_unset=True), scope, None)
     return DocumentService.create(db, data, user_id=current_user.id)
 
 
@@ -93,20 +101,24 @@ async def list_documents(
     stato: Optional[DocumentStatus] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """Lista documenti con filtri opzionali."""
+    company_id = scope if scope is not None else company_id
     return DocumentService.get_all(db, company_id, worker_id, categoria, stato, skip, limit)
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)
 async def get_document(
     document_id: int,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """Ottieni documento per ID."""
+    resource = require_resource(db, "document_id", document_id, scope)
     try:
         return DocumentService.get_by_id(db, document_id)
     except ValueError as e:
@@ -117,10 +129,13 @@ async def get_document(
 async def update_document(
     document_id: int,
     data: DocumentUpdate,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """Aggiorna documento."""
+    resource = require_resource(db, "document_id", document_id, scope)
+    validate_write(db, data.model_dump(exclude_unset=True), scope, owner_id(db, resource))
     try:
         return DocumentService.update(db, document_id, data)
     except ValueError as e:
@@ -130,10 +145,12 @@ async def update_document(
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_document(
     document_id: int,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """Elimina documento (soft delete)."""
+    resource = require_resource(db, "document_id", document_id, scope)
     try:
         DocumentService.delete(db, document_id)
     except ValueError as e:
@@ -144,10 +161,13 @@ async def delete_document(
 async def new_version(
     document_id: int,
     data: DocumentCreate,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """Crea nuova versione di un documento."""
+    resource = require_resource(db, "document_id", document_id, scope)
+    validate_write(db, data.model_dump(exclude_unset=True), scope, owner_id(db, resource))
     try:
         return DocumentService.new_version(db, document_id, data, user_id=current_user.id)
     except ValueError as e:
@@ -157,10 +177,12 @@ async def new_version(
 @router.get("/{document_id}/versions", response_model=list[DocumentResponse])
 async def get_versions(
     document_id: int,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """Ottieni tutte le versioni di un documento."""
+    resource = require_resource(db, "document_id", document_id, scope)
     try:
         return DocumentService.get_versions(db, document_id)
     except ValueError as e:
