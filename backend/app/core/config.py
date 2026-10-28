@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     SQLALCHEMY_ECHO: bool = False
 
     # Redis
+    REDIS_TIMEOUT_SECONDS: float = 0.2
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # MinIO
@@ -50,8 +51,10 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list = ["http://localhost:3000", "http://localhost:3001", "http://localhost"]
 
     # Rate Limiting
-    RATE_LIMIT_REQUESTS: int = 5000
-    RATE_LIMIT_PERIOD_SECONDS: int = 3600
+    RATE_LIMIT_AUTH_REQUESTS: int = 10
+    TRUSTED_PROXY_IPS: list[str] = []
+    RATE_LIMIT_REQUESTS: int = 300
+    RATE_LIMIT_PERIOD_SECONDS: int = 60
 
     # File Upload
     MAX_UPLOAD_FILE_SIZE: int = 50 * 1024 * 1024  # 50MB

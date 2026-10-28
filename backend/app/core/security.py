@@ -3,6 +3,7 @@ Security utilities: password hashing, JWT tokens, etc.
 """
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from uuid import uuid4
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from app.core.config import settings
@@ -48,6 +49,7 @@ def create_access_token(
     
     to_encode = {
         "sub": subject,
+        "jti": str(uuid4()),
         "exp": expire,
         "iat": datetime.now(timezone.utc),
         "type": "access",
@@ -77,6 +79,7 @@ def create_refresh_token(subject: str) -> str:
     
     to_encode = {
         "sub": subject,
+        "jti": str(uuid4()),
         "exp": expire,
         "iat": datetime.now(timezone.utc),
         "type": "refresh",

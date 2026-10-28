@@ -39,3 +39,8 @@ def api_client(api_db: Session) -> Iterator[TestClient]:
         yield client
     app.dependency_overrides.clear()
     app.dependency_overrides.update(original)
+
+
+@pytest.fixture(autouse=True)
+def no_real_redis(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("app.core.redis_client.get_redis", lambda: None)

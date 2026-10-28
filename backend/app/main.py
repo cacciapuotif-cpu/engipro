@@ -34,6 +34,9 @@ app.include_router(medical_router)
 app.include_router(dpi_router)
 app.include_router(attendance_router)
 
+from app.core.rate_limit import RateLimitMiddleware
+app.add_middleware(RateLimitMiddleware)
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
