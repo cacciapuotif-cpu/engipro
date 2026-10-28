@@ -3,6 +3,7 @@ Application configuration management.
 """
 from pydantic_settings import BaseSettings
 from typing import Optional
+import logging
 import sys
 
 
@@ -43,7 +44,9 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # Security
-    PASSWORD_MIN_LENGTH: int = 8
+    PASSWORD_MIN_LENGTH: int = 10
+    ADMIN_INITIAL_PASSWORD: Optional[str] = None
+    ADMIN_EMAIL: str = "admin@engipro.it"
     PASSWORD_MAX_LENGTH: int = 128
 
     # CORS — override with comma-separated domains in production
@@ -71,9 +74,8 @@ settings = Settings()
 
 # Refuse to start in production with the default insecure key
 if settings.ENV == "production" and settings.SECRET_KEY == _INSECURE_DEFAULT_KEY:
-    print(
+    logging.getLogger(__name__).critical(
         "FATAL: SECRET_KEY is set to the insecure default value. "
         "Set a strong SECRET_KEY environment variable before starting in production.",
-        file=sys.stderr,
     )
     sys.exit(1)

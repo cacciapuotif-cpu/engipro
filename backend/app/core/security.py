@@ -125,7 +125,16 @@ def validate_password(password: str) -> bool:
         True if password meets requirements
     """
     if len(password) < settings.PASSWORD_MIN_LENGTH:
-        raise ValueError(f"Password must be at least {settings.PASSWORD_MIN_LENGTH} characters")
+        raise ValueError(f"La password deve contenere almeno {settings.PASSWORD_MIN_LENGTH} caratteri")
     if len(password) > settings.PASSWORD_MAX_LENGTH:
-        raise ValueError(f"Password must be at most {settings.PASSWORD_MAX_LENGTH} characters")
+        raise ValueError(f"La password deve contenere al massimo {settings.PASSWORD_MAX_LENGTH} caratteri")
+    requirements = (
+        (any(c.isupper() for c in password), "una lettera maiuscola"),
+        (any(c.islower() for c in password), "una lettera minuscola"),
+        (any(c.isdigit() for c in password), "una cifra"),
+        (any(not c.isalnum() and not c.isspace() for c in password), "un carattere speciale"),
+    )
+    missing = [description for present, description in requirements if not present]
+    if missing:
+        raise ValueError("La password deve contenere: " + ", ".join(missing))
     return True
