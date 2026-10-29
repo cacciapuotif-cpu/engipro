@@ -46,3 +46,20 @@ def test_audit_database_immutable(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
         with pytest.raises(IntegrityError, match='immutabile'):
             connection.exec_driver_sql("UPDATE audit_logs SET action = 'PUT'" if action == 'UPDATE' else 'DELETE FROM audit_logs')
     engine.dispose()
+
+
+def test_postgresql_migration_sql(monkeypatch: pytest.MonkeyPatch) -> None:
+    from io import StringIO
+    monkeypatch.setattr(settings, 'DATABASE_URL', 'postgresql://unused:unused@localhost/unused')
+    output = StringIO()
+    config = Config(str(Path(__file__).resolve().parents[1] / 'alembic.ini'), output_buffer=output)
+    command.upgrade(config, 'head', sql=True)
+    sql = output.getvalue()
+    assert 'ALTER TABLE departments ADD CONSTRAINT fk_departments_responsabile' in sql
+    assert 'CREATE TYPE' in sql
+    assert 'CREATE TRIGGER audit_immutable' in sql
+    output.seek(0)
+    output.truncate(0)
+    command.downgrade(config, 'head:base', sql=True)
+    assert 'DROP TYPE' in output.getvalue()
+    assert 'DROP FUNCTION reject_audit_mutation()' in output.getvalue()

@@ -35,6 +35,8 @@ class AuthService:
         Raises:
             ValueError: If email already exists or password invalid
         """
+        if user_data.role != UserRole.WORKER:
+            raise ValueError("La registrazione pubblica non consente ruoli privilegiati")
         # Check if user already exists
         existing_user = db.query(User).filter(User.email == user_data.email).first()
         if existing_user:

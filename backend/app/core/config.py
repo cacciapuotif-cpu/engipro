@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     MINIO_SECRET_KEY: str = "minioadmin123"
     MINIO_BUCKET: str = "engipro"
     MINIO_SECURE: bool = False
+    MINIO_PUBLIC_ENDPOINT: Optional[str] = None
+    MINIO_PUBLIC_SECURE: bool = True
+    MINIO_REGION: str = "us-east-1"
 
     # JWT
     SECRET_KEY: str = _INSECURE_DEFAULT_KEY

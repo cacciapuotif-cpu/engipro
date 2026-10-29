@@ -1,4 +1,5 @@
 """Audit writes, access controls, filtering, exports and immutability."""
+from typing import Any, Iterator
 from collections.abc import Iterator
 from datetime import datetime, timezone
 from unittest.mock import patch
@@ -20,7 +21,7 @@ from app.services.audit import AuditService
 
 
 @pytest.fixture
-def audit_api(monkeypatch):
+def audit_api(monkeypatch: Any) -> Iterator[Any]:
     engine = create_engine('sqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
     factory = sessionmaker(bind=engine)
@@ -47,7 +48,7 @@ def audit_api(monkeypatch):
     engine.dispose()
 
 
-def test_worker_post_logged(audit_api) -> None:
+def test_worker_post_logged(audit_api: Any) -> None:
     client, factory, _ = audit_api
     response = client.post('/api/v1/workers', json=dict(company_id=1, codice_fiscale='ABCDEF12G34H567I', nome='Nome', cognome='Cognome', data_nascita='1990-01-01', data_assunzione='2020-01-01', mansione='Tecnico'))
     assert response.status_code == 201
@@ -57,7 +58,7 @@ def test_worker_post_logged(audit_api) -> None:
         assert row.path == '/api/v1/workers'
 
 
-def test_medical_read_logged(audit_api) -> None:
+def test_medical_read_logged(audit_api: Any) -> None:
     client, factory, _ = audit_api
     assert client.get('/api/v1/medical/visits').status_code == 200
     with factory() as db:
@@ -65,14 +66,14 @@ def test_medical_read_logged(audit_api) -> None:
         assert (row.action, row.resource_type, row.status_code) == ('GET', 'medical', 200)
 
 
-def test_audit_admin_only(audit_api) -> None:
+def test_audit_admin_only(audit_api: Any) -> None:
     client, _, selected = audit_api
     selected[0] = 'COMPANY_ADMIN'
     assert client.get('/api/v1/audit/logs').status_code == 403
     assert client.get('/api/v1/audit/logs/export').status_code == 403
 
 
-def test_filters_and_csv(audit_api) -> None:
+def test_filters_and_csv(audit_api: Any) -> None:
     client, factory, _ = audit_api
     with factory() as db:
         for year, resource in [(2024, 'workers'), (2025, 'medical'), (2026, 'workers')]:
@@ -94,7 +95,7 @@ def test_filters_and_csv(audit_api) -> None:
     assert "'=DANGEROUS()" in response.text
 
 
-def test_failed_login_logged_without_password(audit_api) -> None:
+def test_failed_login_logged_without_password(audit_api: Any) -> None:
     client, factory, _ = audit_api
     with patch('app.api.auth.AuthService.login', side_effect=ValueError('Invalid')):
         assert client.post('/api/v1/auth/login', json={'email': 'bad@example.com', 'password': 'SensitivePassword!'}).status_code == 401
@@ -109,7 +110,7 @@ def test_audit_writer_never_raises() -> None:
         AuditService.log(user_id=None, action='GET', resource_type='workers', resource_id=None, path='/api/v1/workers', ip_address='127.0.0.1', user_agent='', status_code=200)
 
 
-def test_audit_orm_immutable(audit_api) -> None:
+def test_audit_orm_immutable(audit_api: Any) -> None:
     client, factory, _ = audit_api
     client.get('/api/v1/medical/visits')
     with factory() as db:
@@ -124,7 +125,7 @@ def test_audit_orm_immutable(audit_api) -> None:
         db.rollback()
 
 
-def test_successful_login_and_logout_logged(audit_api) -> None:
+def test_successful_login_and_logout_logged(audit_api: Any) -> None:
     from app.core.security import create_access_token, create_refresh_token
     from app.schemas import TokenResponse
     client, factory, _ = audit_api
@@ -138,7 +139,7 @@ def test_successful_login_and_logout_logged(audit_api) -> None:
         assert [(row.path, row.status_code, row.user_id) for row in rows] == [('/api/v1/auth/login', 200, 1), ('/api/v1/auth/logout', 204, 1)]
 
 
-def test_excluded_routes_not_logged(audit_api) -> None:
+def test_excluded_routes_not_logged(audit_api: Any) -> None:
     client, factory, _ = audit_api
     for path in ('/health', '/api/docs', '/api/openapi.json'):
         client.get(path)

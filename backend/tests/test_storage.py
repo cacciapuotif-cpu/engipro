@@ -1,4 +1,5 @@
 """Storage adapter tests without a MinIO server."""
+from typing import Any, Iterator
 from datetime import timedelta
 from unittest.mock import MagicMock, patch
 from app.core.storage import MinIOStorage
@@ -29,3 +30,15 @@ def test_presigned_and_delete() -> None:
         factory.return_value.presigned_get_object.assert_called_once_with(settings.MINIO_BUCKET, 'key', expires=timedelta(seconds=120))
         storage.delete_file('key')
         factory.return_value.remove_object.assert_called_once_with(settings.MINIO_BUCKET, 'key')
+
+
+def test_public_download_endpoint(monkeypatch: Any) -> None:
+    monkeypatch.setattr(settings, 'MINIO_PUBLIC_ENDPOINT', 'storage.example:9000')
+    monkeypatch.setattr(settings, 'MINIO_PUBLIC_SECURE', True)
+    internal, public = MagicMock(), MagicMock()
+    public.presigned_get_object.return_value = 'https://storage.example:9000/signed'
+    with patch('app.core.storage.Minio', side_effect=[internal, public]) as factory:
+        assert MinIOStorage().get_presigned_url('document.pdf') == 'https://storage.example:9000/signed'
+        assert factory.call_args.args == ('storage.example:9000',)
+        assert factory.call_args.kwargs['region'] == settings.MINIO_REGION
+        public.bucket_exists.assert_not_called()

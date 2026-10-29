@@ -1,4 +1,5 @@
 """Real endpoint tests with a deterministic Redis substitute."""
+from typing import Any, Iterator
 from unittest.mock import MagicMock, patch
 import pytest
 from fastapi import FastAPI
@@ -40,7 +41,7 @@ class FakeRedis:
 
 
 @pytest.fixture
-def redis_client(monkeypatch):
+def redis_client(monkeypatch: Any) -> Iterator[Any]:
     fake = FakeRedis()
     monkeypatch.setattr('app.core.redis_client.get_redis', lambda: fake)
     monkeypatch.setattr('app.core.rate_limit.get_redis', lambda: fake)
@@ -54,7 +55,7 @@ def redis_client(monkeypatch):
         yield client, fake
 
 
-def test_logout_revokes_both_tokens(redis_client) -> None:
+def test_logout_revokes_both_tokens(redis_client: Any) -> None:
     client, fake = redis_client
     access, refresh = create_access_token('1'), create_refresh_token('1')
     headers = {'Authorization': f'Bearer {access}'}
@@ -65,7 +66,7 @@ def test_logout_revokes_both_tokens(redis_client) -> None:
         assert fake.ttls[f"blacklist:{decode_token(token)['jti']}"] > 0
 
 
-def test_eleventh_login_limited(redis_client) -> None:
+def test_eleventh_login_limited(redis_client: Any) -> None:
     client, _ = redis_client
     with patch('app.api.auth.AuthService.login', side_effect=ValueError('Invalid')):
         for _ in range(10):
@@ -75,7 +76,7 @@ def test_eleventh_login_limited(redis_client) -> None:
     assert 1 <= int(response.headers['retry-after']) <= 60
 
 
-def test_without_redis_no_limit(redis_client, monkeypatch) -> None:
+def test_without_redis_no_limit(redis_client: Any, monkeypatch: Any) -> None:
     client, _ = redis_client
     monkeypatch.setattr('app.core.redis_client.get_redis', lambda: None)
     monkeypatch.setattr('app.core.rate_limit.get_redis', lambda: None)
@@ -91,7 +92,7 @@ def test_unique_jti() -> None:
     assert len({decode_token(token)['jti'] for token in tokens}) == 3
 
 
-def test_forwarded_ip_trusted_only(monkeypatch) -> None:
+def test_forwarded_ip_trusted_only(monkeypatch: Any) -> None:
     from app.core.config import settings
     request = Request({'type': 'http', 'client': ('192.0.2.5', 1000), 'headers': [(b'x-forwarded-for', b'1.2.3.4, 5.6.7.8')]})
     assert client_ip(request) == '192.0.2.5'

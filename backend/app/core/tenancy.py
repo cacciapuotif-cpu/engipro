@@ -42,14 +42,18 @@ async def enforce_company_scope(
         if state.is_select or state.is_update or state.is_delete:
             options = [with_loader_criteria(model, model.company_id == scope, include_aliases=True) for model in DIRECT]
             options.extend([
-                with_loader_criteria(Company, Company.id == scope, include_aliases=True),
+                with_loader_criteria(Company, (Company.id == scope) & Company.is_active.is_(True), include_aliases=True),
                 with_loader_criteria(CourseEdition, CourseEdition.course_id.in_(select(Course.id).where(Course.company_id == scope)), include_aliases=True),
-                with_loader_criteria(CourseParticipation, CourseParticipation.worker_id.in_(select(Worker.id).where(Worker.company_id == scope)), include_aliases=True),
+                with_loader_criteria(CourseParticipation,
+                    CourseParticipation.worker_id.in_(select(Worker.id).where(Worker.company_id == scope))
+                    & CourseParticipation.edition_id.in_(select(CourseEdition.id).join(Course).where(Course.company_id == scope)), include_aliases=True),
             ])
             state.statement = state.statement.options(*options)
 
     event.listen(db, 'do_orm_execute', filter_queries)
     try:
+        if db.query(Company).filter(Company.id == scope).first() is None:
+            raise HTTPException(status_code=403, detail='Azienda non attiva')
         # Check referenced resources even on subresource lists (404, never existence leaks).
         for name, value in request.path_params.items():
             model = REFERENCES.get(name)

@@ -27,7 +27,12 @@ class MinIOStorage:
         return key
 
     def get_presigned_url(self, key: str, expires_seconds: int = 3600) -> str:
-        return self._get_client().presigned_get_object(
+        client = self._get_client()
+        if settings.MINIO_PUBLIC_ENDPOINT:
+            client = Minio(settings.MINIO_PUBLIC_ENDPOINT, access_key=settings.MINIO_ACCESS_KEY,
+                           secret_key=settings.MINIO_SECRET_KEY, secure=settings.MINIO_PUBLIC_SECURE,
+                           region=settings.MINIO_REGION)
+        return client.presigned_get_object(
             settings.MINIO_BUCKET, key, expires=timedelta(seconds=expires_seconds))
 
     def delete_file(self, key: str) -> None:

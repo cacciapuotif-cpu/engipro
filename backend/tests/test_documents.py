@@ -1,6 +1,7 @@
 """
 Unit tests for Documents module.
 """
+from typing import Any, Iterator
 import pytest
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timezone
@@ -114,7 +115,7 @@ class TestDocumentService:
 
 
 @pytest.fixture
-def upload_client():
+def upload_client() -> Iterator[Any]:
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
     from app.api.documents import router
@@ -132,7 +133,7 @@ def upload_client():
         yield client, storage
 
 
-def test_upload_ok(upload_client) -> None:
+def test_upload_ok(upload_client: Any) -> None:
     client, storage = upload_client
     with patch('app.api.documents.DocumentService.create', return_value=make_document()) as create:
         response = client.post('/api/v1/documents/upload', data={'company_id': 1}, files={'file': ('unsafe.exe', b'%PDF-test', 'application/pdf')})
@@ -143,7 +144,7 @@ def test_upload_ok(upload_client) -> None:
     assert create.call_args.args[1].storage_key == key
 
 
-def test_upload_too_large(upload_client, monkeypatch) -> None:
+def test_upload_too_large(upload_client: Any, monkeypatch: Any) -> None:
     from app.core.config import settings
     monkeypatch.setattr(settings, 'MAX_UPLOAD_FILE_SIZE', 3)
     client, storage = upload_client
@@ -152,14 +153,14 @@ def test_upload_too_large(upload_client, monkeypatch) -> None:
     storage.upload_file.assert_not_called()
 
 
-def test_upload_unsupported(upload_client) -> None:
+def test_upload_unsupported(upload_client: Any) -> None:
     client, storage = upload_client
     response = client.post('/api/v1/documents/upload', data={'company_id': 1}, files={'file': ('doc.txt', b'text', 'text/plain')})
     assert response.status_code == 415
     storage.upload_file.assert_not_called()
 
 
-def test_download_redirect(upload_client) -> None:
+def test_download_redirect(upload_client: Any) -> None:
     client, storage = upload_client
     storage.get_presigned_url.return_value = 'https://storage.example/presigned'
     with patch('app.api.documents.DocumentService.get_by_id', return_value=make_document()):

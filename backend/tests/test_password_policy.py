@@ -1,4 +1,5 @@
 """Password policy and safe bootstrap tests."""
+from typing import Any, Iterator
 from unittest.mock import MagicMock, patch
 import pytest
 from app.core.security import validate_password
@@ -23,7 +24,7 @@ def test_valid_password() -> None:
     assert validate_password('ValidPassword123!') is True
 
 
-def test_seed_requires_password_in_production(monkeypatch) -> None:
+def test_seed_requires_password_in_production(monkeypatch: Any) -> None:
     monkeypatch.setattr(settings, 'ENV', 'production')
     monkeypatch.setattr(settings, 'ADMIN_INITIAL_PASSWORD', None)
     with patch('scripts.seed.SessionLocal') as factory:
@@ -34,10 +35,25 @@ def test_seed_requires_password_in_production(monkeypatch) -> None:
         factory.return_value.close.assert_called_once()
 
 
-def test_seed_validates_password(monkeypatch) -> None:
+def test_seed_validates_password(monkeypatch: Any) -> None:
     monkeypatch.setattr(settings, 'ADMIN_INITIAL_PASSWORD', 'weak')
     with patch('scripts.seed.SessionLocal') as factory:
         factory.return_value.query.return_value.filter.return_value.first.return_value = None
         with pytest.raises(ValueError):
             seed()
         factory.return_value.add.assert_not_called()
+
+
+def test_public_registration_cannot_choose_admin() -> None:
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from app.api.auth import router
+    from app.core.database import get_db
+    app = FastAPI()
+    app.include_router(router)
+    db = MagicMock()
+    app.dependency_overrides[get_db] = lambda: db
+    with TestClient(app) as client:
+        response = client.post('/api/v1/auth/register', json={'email': 'attacker@example.com', 'password': 'StrongPassword1!', 'role': 'ADMIN'})
+    assert response.status_code == 400
+    db.add.assert_not_called()

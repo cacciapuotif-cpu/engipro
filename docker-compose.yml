@@ -73,6 +73,10 @@ services:
       MINIO_URL: minio:9000
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin123  # must match MinIO MINIO_ROOT_PASSWORD
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-}
+      MINIO_PUBLIC_SECURE: ${MINIO_PUBLIC_SECURE:-true}
+      MINIO_REGION: ${MINIO_REGION:-us-east-1}
+      TRUSTED_PROXY_NETWORKS: ${TRUSTED_PROXY_NETWORKS:-[]}
       ENV: development
       DEBUG: "true"
       SECRET_KEY: engipro-secret-key-change-in-production

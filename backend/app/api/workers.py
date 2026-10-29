@@ -125,7 +125,7 @@ async def list_workers(
     try:
         if company_id is None:
             from app.models import Worker as WorkerModel
-            query = db.query(WorkerModel)
+            query = db.query(WorkerModel).filter(WorkerModel.is_active == True)
             if status:
                 query = query.filter(WorkerModel.stato == status)
             return query.offset(skip).limit(limit).all()

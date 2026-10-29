@@ -85,6 +85,7 @@ class CourseParticipation(Base):
     __tablename__ = "course_participations"
 
     id = Column(Integer, primary_key=True, index=True)
+    is_active = Column(Boolean, default=True, nullable=False)
     edition_id = Column(Integer, ForeignKey("course_editions.id"), nullable=False, index=True)
     worker_id = Column(Integer, ForeignKey("workers.id"), nullable=False, index=True)
     esito = Column(SqlEnum(Attestato), nullable=False, default=Attestato.ASSENTE)
