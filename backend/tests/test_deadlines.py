@@ -55,7 +55,7 @@ class TestDeadlineService:
     def test_get_all(self):
         db = MagicMock()
         deadlines = [make_deadline(id=i) for i in range(3)]
-        db.query.return_value.order_by.return_value.offset.return_value.limit.return_value.all.return_value = deadlines
+        db.query.return_value.filter.return_value.order_by.return_value.offset.return_value.limit.return_value.all.return_value = deadlines
         result = DeadlineService.get_all(db)
         assert len(result) == 3
 
@@ -74,7 +74,8 @@ class TestDeadlineService:
         deadline = make_deadline()
         db.query.return_value.filter.return_value.first.return_value = deadline
         DeadlineService.delete(db, 1)
-        db.delete.assert_called_once_with(deadline)
+        assert deadline.is_active is False
+        db.delete.assert_not_called()
         db.commit.assert_called_once()
 
     def test_complete_deadline(self):

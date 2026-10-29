@@ -10,12 +10,10 @@ from app.models.medical import HealthProtocol, MedicalVisit
 from app.models.training import Course, CourseEdition, CourseParticipation
 from app.models.dpi import DPIItem, DPIAssignment
 from app.models.attendance import Timbratura, AttendanceRecord
-
-# Ensure relationships are established
-User.company = None
-Worker.company = None
+from app.models.audit_log import AuditLog
 
 __all__ = [
+    "AuditLog",
     "User", "UserRole",
     "Company", "Location", "Department",
     "Worker", "ContractType", "WorkerStatus",

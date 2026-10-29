@@ -6,6 +6,7 @@ from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from app.core.config import settings
+from uuid import uuid4
 
 
 # Password hashing context
@@ -51,6 +52,7 @@ def create_access_token(
         "exp": expire,
         "iat": datetime.now(timezone.utc),
         "type": "access",
+        "jti": str(uuid4()),
     }
     
     encoded_jwt = jwt.encode(
@@ -80,6 +82,7 @@ def create_refresh_token(subject: str) -> str:
         "exp": expire,
         "iat": datetime.now(timezone.utc),
         "type": "refresh",
+        "jti": str(uuid4()),
     }
     
     encoded_jwt = jwt.encode(
@@ -122,7 +125,18 @@ def validate_password(password: str) -> bool:
         True if password meets requirements
     """
     if len(password) < settings.PASSWORD_MIN_LENGTH:
-        raise ValueError(f"Password must be at least {settings.PASSWORD_MIN_LENGTH} characters")
+        raise ValueError(f"La password deve contenere almeno {settings.PASSWORD_MIN_LENGTH} caratteri")
     if len(password) > settings.PASSWORD_MAX_LENGTH:
-        raise ValueError(f"Password must be at most {settings.PASSWORD_MAX_LENGTH} characters")
+        raise ValueError(f"La password deve contenere al massimo {settings.PASSWORD_MAX_LENGTH} caratteri")
+    missing: list[str] = []
+    if not any(char.isupper() for char in password):
+        missing.append("una lettera maiuscola")
+    if not any(char.islower() for char in password):
+        missing.append("una lettera minuscola")
+    if not any(char.isdigit() for char in password):
+        missing.append("una cifra")
+    if not any(not char.isalnum() and not char.isspace() for char in password):
+        missing.append("un carattere speciale")
+    if missing:
+        raise ValueError("Alla password manca: " + ", ".join(missing))
     return True

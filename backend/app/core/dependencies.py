@@ -1,7 +1,7 @@
 """
 FastAPI dependencies for authentication and authorization.
 """
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -12,6 +12,7 @@ security = HTTPBearer()
 
 
 async def get_current_user(
+    request: Request,
     db: Session = Depends(get_db),
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> User:
@@ -32,6 +33,7 @@ async def get_current_user(
     
     try:
         user = AuthService.get_user_by_token(db, token)
+        request.state.user_id = user.id
         return user
     except ValueError as e:
         raise HTTPException(
@@ -86,3 +88,12 @@ def require_role(*roles: UserRole):
         return current_user
     
     return check_role
+
+
+def get_company_scope(current_user: User = Depends(get_current_active_user)) -> int | None:
+    """ADMIN is global; every other account must belong to a company."""
+    if current_user.role == UserRole.ADMIN:
+        return None
+    if current_user.company_id is None:
+        raise HTTPException(status_code=403, detail='Utente senza azienda assegnata')
+    return current_user.company_id

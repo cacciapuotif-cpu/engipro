@@ -4,17 +4,10 @@ FastAPI application entry point.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.core.database import Base, engine
 
-# Import all models before creating tables
-from app.models.deadline import Deadline
-from app.models.document import Document
-from app.models.medical import HealthProtocol, MedicalVisit
-from app.models.training import Course, CourseEdition, CourseParticipation
-from app.models.dpi import DPIItem, DPIAssignment
-from app.models.attendance import Timbratura, AttendanceRecord
-# Create all tables
-Base.metadata.create_all(bind=engine)
+import app.models  # noqa: F401
+from app.core.rate_limit import RateLimitMiddleware
+from app.core.audit_middleware import AuditMiddleware
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -35,6 +28,7 @@ from app.api.training import router as training_router
 from app.api.medical import router as medical_router
 from app.api.dpi import router as dpi_router
 from app.api.attendance import router as attendance_router
+from app.api.audit import router as audit_router
 
 app.include_router(auth_router)
 app.include_router(companies_router)
@@ -45,8 +39,11 @@ app.include_router(training_router)
 app.include_router(medical_router)
 app.include_router(dpi_router)
 app.include_router(attendance_router)
+app.include_router(audit_router)
 
 # CORS middleware
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(AuditMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,

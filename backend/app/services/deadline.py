@@ -20,7 +20,7 @@ class DeadlineService:
 
     @staticmethod
     def get_by_id(db: Session, deadline_id: int) -> Deadline:
-        deadline = db.query(Deadline).filter(Deadline.id == deadline_id).first()
+        deadline = db.query(Deadline).filter(Deadline.is_active == True, Deadline.id == deadline_id).first()
         if not deadline:
             raise ValueError(f"Deadline {deadline_id} non trovata")
         return deadline
@@ -34,7 +34,7 @@ class DeadlineService:
         skip: int = 0,
         limit: int = 100,
     ) -> list[Deadline]:
-        query = db.query(Deadline)
+        query = db.query(Deadline).filter(Deadline.is_active == True)
         if company_id:
             query = query.filter(Deadline.company_id == company_id)
         if worker_id:
@@ -55,7 +55,7 @@ class DeadlineService:
     @staticmethod
     def delete(db: Session, deadline_id: int) -> None:
         deadline = DeadlineService.get_by_id(db, deadline_id)
-        db.delete(deadline)
+        deadline.is_active = False
         db.commit()
 
     @staticmethod
@@ -68,44 +68,44 @@ class DeadlineService:
         return deadline
 
     @staticmethod
-    def get_upcoming_alerts(db: Session, company_id: int, days: int = 7) -> list[Deadline]:
+    def get_upcoming_alerts(db: Session, company_id: Optional[int], days: int = 7) -> list[Deadline]:
         """
         Ritorna scadenze in alert entro N giorni.
-        
+
         Args:
             db: Database session
             company_id: Filtra per azienda
             days: Giorni di preavviso (default 7)
-        
+
         Returns:
             Lista di scadenze imminenti
         """
         today = date.today()
         alert_until = today + timedelta(days=days)
-        
-        return db.query(Deadline).filter(
-            Deadline.company_id == company_id,
+
+        return db.query(Deadline).filter(Deadline.is_active == True,
+            (Deadline.company_id == company_id) if company_id is not None else True,
             Deadline.data_scadenza >= today,
             Deadline.data_scadenza <= alert_until,
             Deadline.stato.in_([DeadlineStatus.PENDING, DeadlineStatus.ALERT])
         ).order_by(Deadline.data_scadenza).all()
 
     @staticmethod
-    def get_expired(db: Session, company_id: int) -> list[Deadline]:
+    def get_expired(db: Session, company_id: Optional[int]) -> list[Deadline]:
         """
         Ritorna scadenze scadute non completate.
-        
+
         Args:
             db: Database session
             company_id: Filtra per azienda
-        
+
         Returns:
             Lista di scadenze scadute
         """
         today = date.today()
-        
-        return db.query(Deadline).filter(
-            Deadline.company_id == company_id,
+
+        return db.query(Deadline).filter(Deadline.is_active == True,
+            (Deadline.company_id == company_id) if company_id is not None else True,
             Deadline.data_scadenza < today,
             Deadline.stato.in_([DeadlineStatus.PENDING, DeadlineStatus.ALERT])
         ).order_by(Deadline.data_scadenza).all()
@@ -113,68 +113,68 @@ class DeadlineService:
     @staticmethod
     def get_by_type_and_status(
         db: Session,
-        company_id: int,
+        company_id: Optional[int],
         deadline_type: Optional[str] = None,
         stato: Optional[DeadlineStatus] = None,
     ) -> list[Deadline]:
         """
         Ritorna scadenze filtrate per tipo e stato.
-        
+
         Args:
             db: Database session
             company_id: Filtra per azienda
             deadline_type: Tipo di scadenza (opzionale)
             stato: Stato scadenza (opzionale)
-        
+
         Returns:
             Lista di scadenze filtrate
         """
-        query = db.query(Deadline).filter(Deadline.company_id == company_id)
-        
+        query = db.query(Deadline).filter(Deadline.is_active == True).filter(Deadline.is_active == True, Deadline.company_id == company_id)
+
         if deadline_type:
             query = query.filter(Deadline.tipo == deadline_type)
         if stato:
             query = query.filter(Deadline.stato == stato)
-        
+
         return query.order_by(Deadline.data_scadenza).all()
 
     @staticmethod
-    def get_dashboard_summary(db: Session, company_id: int) -> dict:
+    def get_dashboard_summary(db: Session, company_id: Optional[int]) -> dict:
         """
         Ritorna un riepilogo per dashboard.
-        
+
         Args:
             db: Database session
             company_id: Filtra per azienda
-        
+
         Returns:
             Dict con conteggi per categoria
         """
-        total = db.query(Deadline).filter(
-            Deadline.company_id == company_id,
+        total = db.query(Deadline).filter(Deadline.is_active == True,
+            (Deadline.company_id == company_id) if company_id is not None else True,
             Deadline.stato != DeadlineStatus.COMPLETED
         ).count()
-        
+
         expired = DeadlineService.get_expired(db, company_id)
         alerts = DeadlineService.get_upcoming_alerts(db, company_id)
-        
+
         return {
             'total_pending': total,
             'expired_count': len(expired),
             'alert_count': len(alerts),
             'by_priority': {
-                'HIGH': db.query(Deadline).filter(
-                    Deadline.company_id == company_id,
+                'HIGH': db.query(Deadline).filter(Deadline.is_active == True,
+                    (Deadline.company_id == company_id) if company_id is not None else True,
                     Deadline.priorita == 'HIGH',
                     Deadline.stato != DeadlineStatus.COMPLETED
                 ).count(),
-                'MEDIUM': db.query(Deadline).filter(
-                    Deadline.company_id == company_id,
+                'MEDIUM': db.query(Deadline).filter(Deadline.is_active == True,
+                    (Deadline.company_id == company_id) if company_id is not None else True,
                     Deadline.priorita == 'MEDIUM',
                     Deadline.stato != DeadlineStatus.COMPLETED
                 ).count(),
-                'LOW': db.query(Deadline).filter(
-                    Deadline.company_id == company_id,
+                'LOW': db.query(Deadline).filter(Deadline.is_active == True,
+                    (Deadline.company_id == company_id) if company_id is not None else True,
                     Deadline.priorita == 'LOW',
                     Deadline.stato != DeadlineStatus.COMPLETED
                 ).count(),

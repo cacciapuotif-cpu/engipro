@@ -5,6 +5,7 @@ from fastapi import Path, APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import Optional
 from app.core.database import get_db
+from app.core.tenancy import enforce_company_scope
 from app.core.dependencies import get_current_active_user
 from app.models import User
 from app.models.medical import VisitType, VisitStatus, VisitOutcome
@@ -16,7 +17,7 @@ from app.services.medical import HealthProtocolService, MedicalVisitService
 from pydantic import BaseModel
 from datetime import date
 
-router = APIRouter(prefix="/api/v1/medical", tags=["Medical"])
+router = APIRouter(dependencies=[Depends(enforce_company_scope)], prefix="/api/v1/medical", tags=["Medical"])
 
 
 # --- Protocolli Sanitari ---
@@ -167,3 +168,4 @@ async def cancel_visit(
         return MedicalVisitService.cancel(db, visit_id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+

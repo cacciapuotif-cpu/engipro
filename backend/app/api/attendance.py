@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import date
 from app.core.database import get_db
+from app.core.tenancy import enforce_company_scope
 from app.core.dependencies import get_current_active_user
 from app.models import User
 from app.models.attendance import AttendanceStatus
@@ -15,7 +16,7 @@ from app.schemas.attendance import (
 )
 from app.services.attendance import TimbratureService, AttendanceRecordService
 
-router = APIRouter(prefix="/api/v1/attendance", tags=["Attendance"])
+router = APIRouter(dependencies=[Depends(enforce_company_scope)], prefix="/api/v1/attendance", tags=["Attendance"])
 
 
 # --- Timbrature ---
@@ -122,3 +123,4 @@ async def approve_attendance_record(
         return AttendanceRecordService.approve(db, record_id, current_user.id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+

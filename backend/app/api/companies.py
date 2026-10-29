@@ -4,6 +4,7 @@ Company management API routes.
 from fastapi import Path, APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.core.tenancy import enforce_company_scope
 from app.core.dependencies import get_current_active_user, require_role
 from app.models import User, UserRole
 from app.schemas.company import (
@@ -14,7 +15,7 @@ from app.schemas.company import (
 )
 from app.services.company import CompanyService
 
-router = APIRouter(prefix="/api/v1/companies", tags=["Companies"])
+router = APIRouter(dependencies=[Depends(enforce_company_scope)], prefix="/api/v1/companies", tags=["Companies"])
 
 
 @router.post("", response_model=CompanyResponse, status_code=status.HTTP_201_CREATED)
@@ -171,3 +172,4 @@ async def get_company_stats(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         )
+
