@@ -9,13 +9,14 @@ from fastapi.responses import RedirectResponse
 from app.core.config import settings
 from app.core.storage import MinIOStorage, get_storage
 from app.core.database import get_db
+from app.core.tenancy import enforce_company_scope
 from app.core.dependencies import get_current_active_user
 from app.models import User
 from app.models.document import DocumentCategory, DocumentStatus
 from app.schemas.document import DocumentCreate, DocumentUpdate, DocumentResponse
 from app.services.document import DocumentService
 
-router = APIRouter(prefix="/api/v1/documents", tags=["Documents"])
+router = APIRouter(dependencies=[Depends(enforce_company_scope)], prefix="/api/v1/documents", tags=["Documents"])
 
 @router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 async def upload_document(
@@ -168,3 +169,4 @@ async def get_versions(
         return DocumentService.get_versions(db, document_id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+

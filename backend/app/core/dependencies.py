@@ -86,3 +86,12 @@ def require_role(*roles: UserRole):
         return current_user
     
     return check_role
+
+
+def get_company_scope(current_user: User = Depends(get_current_active_user)) -> int | None:
+    """ADMIN is global; every other account must belong to a company."""
+    if current_user.role == UserRole.ADMIN:
+        return None
+    if current_user.company_id is None:
+        raise HTTPException(status_code=403, detail='Utente senza azienda assegnata')
+    return current_user.company_id

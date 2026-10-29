@@ -5,6 +5,7 @@ from fastapi import Path, APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import Optional
 from app.core.database import get_db
+from app.core.tenancy import enforce_company_scope
 from app.core.dependencies import get_current_active_user
 from app.models import User
 from app.models.dpi import DPICategory, DPIStatus
@@ -14,7 +15,7 @@ from app.schemas.dpi import (
 )
 from app.services.dpi import DPIItemService, DPIAssignmentService
 
-router = APIRouter(prefix="/api/v1/dpi", tags=["DPI"])
+router = APIRouter(dependencies=[Depends(enforce_company_scope)], prefix="/api/v1/dpi", tags=["DPI"])
 
 
 # --- Catalogo DPI ---
@@ -157,3 +158,4 @@ async def return_dpi(
         return DPIAssignmentService.return_dpi(db, assignment_id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+

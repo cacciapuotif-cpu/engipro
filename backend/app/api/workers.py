@@ -4,6 +4,7 @@ Worker management API routes.
 from fastapi import Path, APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.core.tenancy import enforce_company_scope
 from app.core.dependencies import get_current_active_user, require_role
 from app.models import User, UserRole, WorkerStatus
 from app.schemas.worker import (
@@ -14,7 +15,7 @@ from app.schemas.worker import (
 )
 from app.services.worker import WorkerService
 
-router = APIRouter(prefix="/api/v1/workers", tags=["Workers"])
+router = APIRouter(dependencies=[Depends(enforce_company_scope)], prefix="/api/v1/workers", tags=["Workers"])
 
 
 # ── Routes with fixed path segments MUST come before /{worker_id} wildcard ──
@@ -204,3 +205,4 @@ async def change_worker_status(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         )
+

@@ -5,13 +5,14 @@ from fastapi import Path, APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import Optional
 from app.core.database import get_db
+from app.core.tenancy import enforce_company_scope
 from app.core.dependencies import get_current_active_user
 from app.models import User
 from app.models.deadline import DeadlineStatus
 from app.schemas.deadline import DeadlineCreate, DeadlineUpdate, DeadlineResponse
 from app.services.deadline import DeadlineService
 
-router = APIRouter(prefix="/api/v1/deadlines", tags=["Deadlines"])
+router = APIRouter(dependencies=[Depends(enforce_company_scope)], prefix="/api/v1/deadlines", tags=["Deadlines"])
 
 
 @router.post("", response_model=DeadlineResponse, status_code=status.HTTP_201_CREATED)
@@ -140,3 +141,4 @@ async def complete_deadline(
         return DeadlineService.complete(db, deadline_id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+

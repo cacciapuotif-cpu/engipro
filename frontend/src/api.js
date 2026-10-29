@@ -24,13 +24,13 @@ export const apiAuth      = { login: (e,p) => post('/auth/login', {email:e,passw
 export const apiCompanies = { list: () => get('/companies'), get: (id) => get(`/companies/${id}`), create: (d) => post('/companies',d), update: (id,d) => put(`/companies/${id}`,d), delete: (id) => del(`/companies/${id}`) };
 export const apiWorkers   = {
   list: () => get('/workers'),
-  listByCompany: (cid) => get(`/workers/company/${cid}`),
+  listByCompany: (cid) => get(`/workers?company_id=${cid}`),
   get: (id) => get(`/workers/${id}`),
   create: (d) => post('/workers',d),
   update: (id,d) => put(`/workers/${id}`,d),
   delete: (id) => del(`/workers/${id}`),
   search: (q) => get(`/workers/search?q=${encodeURIComponent(q)}`),
-  setStatus: (id,s) => put(`/workers/${id}/status/${s}`),
+  setStatus: (id,s) => post(`/workers/${id}/status/${s}`),
 };
 export const apiDeadlines = { list: () => get('/deadlines'), create: (d) => post('/deadlines',d), update: (id,d) => put(`/deadlines/${id}`,d), delete: (id) => del(`/deadlines/${id}`), complete: (id) => post(`/deadlines/${id}/complete`,{}) };
 export const apiDocuments = { list: () => get('/documents'), create: (d) => post('/documents',d), update: (id,d) => put(`/documents/${id}`,d), delete: (id) => del(`/documents/${id}`) };
@@ -53,3 +53,4 @@ export const apiAttendance= {
   records: () => get('/attendance/records'),
   approveRecord: (id) => post(`/attendance/records/${id}/approve`,{}),
 };
+
