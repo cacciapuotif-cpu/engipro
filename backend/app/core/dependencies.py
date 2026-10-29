@@ -1,7 +1,7 @@
 """
 FastAPI dependencies for authentication and authorization.
 """
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -12,6 +12,7 @@ security = HTTPBearer()
 
 
 async def get_current_user(
+    request: Request,
     db: Session = Depends(get_db),
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> User:
@@ -32,6 +33,7 @@ async def get_current_user(
     
     try:
         user = AuthService.get_user_by_token(db, token)
+        request.state.user_id = user.id
         return user
     except ValueError as e:
         raise HTTPException(

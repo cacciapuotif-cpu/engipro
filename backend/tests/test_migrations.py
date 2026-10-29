@@ -30,3 +30,19 @@ def test_initial_schema_roundtrip(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     command.upgrade(config, "head")
     command.downgrade(config, "base")
     engine.dispose()
+
+
+@pytest.mark.parametrize('action', ['UPDATE', 'DELETE'])
+def test_audit_database_immutable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, action: str) -> None:
+    from sqlalchemy.exc import IntegrityError
+    url = f"sqlite:///{(tmp_path / 'audit.sqlite').as_posix()}"
+    monkeypatch.setattr(settings, 'DATABASE_URL', url)
+    config = Config(str(Path(__file__).resolve().parents[1] / 'alembic.ini'))
+    command.upgrade(config, 'head')
+    engine = create_engine(url)
+    with engine.begin() as connection:
+        connection.exec_driver_sql("INSERT INTO audit_logs (action, resource_type, path, ip_address, user_agent, status_code, timestamp) VALUES ('GET', 'workers', '/api/v1/workers', '127.0.0.1', '', 200, CURRENT_TIMESTAMP)")
+    with engine.begin() as connection:
+        with pytest.raises(IntegrityError, match='immutabile'):
+            connection.exec_driver_sql("UPDATE audit_logs SET action = 'PUT'" if action == 'UPDATE' else 'DELETE FROM audit_logs')
+    engine.dispose()

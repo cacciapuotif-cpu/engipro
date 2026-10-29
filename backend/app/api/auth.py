@@ -1,7 +1,7 @@
 """
 Authentication API routes.
 """
-from fastapi import Path, APIRouter, Depends, HTTPException, status
+from fastapi import Path, APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user
@@ -58,6 +58,7 @@ async def register(
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
+    request: Request,
     credentials: UserLogin,
     db: Session = Depends(get_db),
 ):
@@ -76,6 +77,9 @@ async def login(
     """
     try:
         tokens = AuthService.login(db, credentials)
+        payload = decode_token(tokens.access_token)
+        if payload:
+            request.state.user_id = int(payload["sub"])
         return tokens
     except ValueError as e:
         raise HTTPException(
