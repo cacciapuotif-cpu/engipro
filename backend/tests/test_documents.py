@@ -111,3 +111,59 @@ class TestDocumentService:
         assert DocumentCategory.SICUREZZA == "SICUREZZA"
         assert DocumentCategory.FORMAZIONE == "FORMAZIONE"
         assert DocumentCategory.MEDICINA == "MEDICINA"
+
+
+@pytest.fixture
+def upload_client():
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from app.api.documents import router
+    from app.core.database import get_db
+    from app.core.dependencies import get_current_active_user
+    from app.core.storage import get_storage
+    from app.models import User
+    app = FastAPI()
+    app.include_router(router)
+    storage = MagicMock()
+    app.dependency_overrides[get_db] = lambda: MagicMock()
+    app.dependency_overrides[get_current_active_user] = lambda: User(id=1, role='ADMIN')
+    app.dependency_overrides[get_storage] = lambda: storage
+    with TestClient(app) as client:
+        yield client, storage
+
+
+def test_upload_ok(upload_client) -> None:
+    client, storage = upload_client
+    with patch('app.api.documents.DocumentService.create', return_value=make_document()) as create:
+        response = client.post('/api/v1/documents/upload', data={'company_id': 1}, files={'file': ('unsafe.exe', b'%PDF-test', 'application/pdf')})
+    assert response.status_code == 201
+    key, data, mime = storage.upload_file.call_args.args
+    assert key.startswith('companies/1/documents/') and key.endswith('.pdf')
+    assert data == b'%PDF-test' and mime == 'application/pdf'
+    assert create.call_args.args[1].storage_key == key
+
+
+def test_upload_too_large(upload_client, monkeypatch) -> None:
+    from app.core.config import settings
+    monkeypatch.setattr(settings, 'MAX_UPLOAD_FILE_SIZE', 3)
+    client, storage = upload_client
+    response = client.post('/api/v1/documents/upload', data={'company_id': 1}, files={'file': ('doc.pdf', b'1234', 'application/pdf')})
+    assert response.status_code == 413
+    storage.upload_file.assert_not_called()
+
+
+def test_upload_unsupported(upload_client) -> None:
+    client, storage = upload_client
+    response = client.post('/api/v1/documents/upload', data={'company_id': 1}, files={'file': ('doc.txt', b'text', 'text/plain')})
+    assert response.status_code == 415
+    storage.upload_file.assert_not_called()
+
+
+def test_download_redirect(upload_client) -> None:
+    client, storage = upload_client
+    storage.get_presigned_url.return_value = 'https://storage.example/presigned'
+    with patch('app.api.documents.DocumentService.get_by_id', return_value=make_document()):
+        response = client.get('/api/v1/documents/1/download', follow_redirects=False)
+    assert response.status_code == 302
+    assert response.headers['location'] == 'https://storage.example/presigned'
+    storage.get_presigned_url.assert_called_once_with('companies/1/documents/test.pdf')
