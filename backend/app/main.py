@@ -4,17 +4,8 @@ FastAPI application entry point.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.core.database import Base, engine
 
-# Import all models before creating tables
-from app.models.deadline import Deadline
-from app.models.document import Document
-from app.models.medical import HealthProtocol, MedicalVisit
-from app.models.training import Course, CourseEdition, CourseParticipation
-from app.models.dpi import DPIItem, DPIAssignment
-from app.models.attendance import Timbratura, AttendanceRecord
-# Create all tables
-Base.metadata.create_all(bind=engine)
+import app.models  # noqa: F401
 
 # Initialize FastAPI app
 app = FastAPI(
