@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 
 import app.models  # noqa: F401
+from app.core.rate_limit import RateLimitMiddleware
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -38,6 +39,7 @@ app.include_router(dpi_router)
 app.include_router(attendance_router)
 
 # CORS middleware
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,

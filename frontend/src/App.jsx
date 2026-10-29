@@ -788,6 +788,7 @@ function LoginScreen({ onLogin }) {
     try {
       const res = await apiAuth.login(email, password);
       auth.setToken(res.access_token);
+      auth.setRefreshToken(res.refresh_token);
       onLogin();
     } catch(e) { setError(e.message); }
     finally { setLoading(false); }
@@ -926,7 +927,7 @@ export default function App() {
             ))}
           </nav>
           <div className="sidebar-footer">
-            <div className="user-card" onClick={() => { auth.setToken(null); setLoggedIn(false); }}>
+            <div className="user-card" onClick={async () => { try { await apiAuth.logout(); } catch (e) { console.error('Logout non riuscito', e); } finally { auth.setToken(null); auth.setRefreshToken(null); setLoggedIn(false); } }}>
               <div className="user-avatar">{userInitials}</div>
               <div>
                 <div className="user-name">{userName}</div>

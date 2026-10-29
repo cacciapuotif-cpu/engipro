@@ -6,6 +6,7 @@ from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from app.core.config import settings
+from uuid import uuid4
 
 
 # Password hashing context
@@ -51,6 +52,7 @@ def create_access_token(
         "exp": expire,
         "iat": datetime.now(timezone.utc),
         "type": "access",
+        "jti": str(uuid4()),
     }
     
     encoded_jwt = jwt.encode(
@@ -80,6 +82,7 @@ def create_refresh_token(subject: str) -> str:
         "exp": expire,
         "iat": datetime.now(timezone.utc),
         "type": "refresh",
+        "jti": str(uuid4()),
     }
     
     encoded_jwt = jwt.encode(

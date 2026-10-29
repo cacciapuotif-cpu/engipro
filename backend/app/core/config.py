@@ -50,8 +50,10 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list = ["http://localhost:3000", "http://localhost:3001", "http://localhost"]
 
     # Rate Limiting
-    RATE_LIMIT_REQUESTS: int = 5000
-    RATE_LIMIT_PERIOD_SECONDS: int = 3600
+    AUTH_RATE_LIMIT_REQUESTS: int = 10
+    RATE_LIMIT_REQUESTS: int = 300
+    RATE_LIMIT_PERIOD_SECONDS: int = 60
+    TRUSTED_PROXY_NETWORKS: list[str] = []
 
     # File Upload
     MAX_UPLOAD_FILE_SIZE: int = 50 * 1024 * 1024  # 50MB

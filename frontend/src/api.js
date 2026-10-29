@@ -3,6 +3,7 @@ let _token = localStorage.getItem('engipro_token') || null;
 export const auth = {
   setToken: (t) => { _token = t; if (t) localStorage.setItem('engipro_token', t); else localStorage.removeItem('engipro_token'); },
   getToken: () => _token,
+  setRefreshToken: (t) => { if (t) localStorage.setItem('engipro_refresh', t); else localStorage.removeItem('engipro_refresh'); },
   isLoggedIn: () => !!_token,
 };
 async function req(method, path, body = null) {
@@ -19,7 +20,7 @@ const post = (path, body) => req('POST',   path, body);
 const put  = (path, body) => req('PUT',    path, body);
 const del  = (path)       => req('DELETE', path);
 
-export const apiAuth      = { login: (e,p) => post('/auth/login', {email:e,password:p}), me: () => get('/auth/me'), logout: () => post('/auth/logout',{}) };
+export const apiAuth      = { login: (e,p) => post('/auth/login', {email:e,password:p}), me: () => get('/auth/me'), logout: () => post('/auth/logout',{refresh_token: localStorage.getItem('engipro_refresh') || null}) };
 export const apiCompanies = { list: () => get('/companies'), get: (id) => get(`/companies/${id}`), create: (d) => post('/companies',d), update: (id,d) => put(`/companies/${id}`,d), delete: (id) => del(`/companies/${id}`) };
 export const apiWorkers   = {
   list: () => get('/workers'),

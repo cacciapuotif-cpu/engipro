@@ -14,6 +14,7 @@ from app.core.security import (
     validate_password,
 )
 from app.core.config import settings
+from app.core.redis_client import is_revoked
 
 
 class AuthService:
@@ -112,7 +113,7 @@ class AuthService:
         """
         # Decode refresh token
         payload = decode_token(refresh_token)
-        if not payload or payload.get("type") != "refresh":
+        if not payload or payload.get("type") != "refresh" or is_revoked(payload):
             raise ValueError("Invalid refresh token")
         
         user_id = payload.get("sub")
@@ -147,7 +148,7 @@ class AuthService:
             ValueError: If token invalid or user not found
         """
         payload = decode_token(token)
-        if not payload or payload.get("type") != "access":
+        if not payload or payload.get("type") != "access" or is_revoked(payload):
             raise ValueError("Invalid access token")
         
         user_id = payload.get("sub")

@@ -14,6 +14,16 @@ from app.schemas import (
     RefreshTokenRequest,
 )
 from app.services.auth import AuthService
+from fastapi.security import HTTPAuthorizationCredentials
+from pydantic import BaseModel, ConfigDict
+from app.core.dependencies import security
+from app.core.security import decode_token
+from app.core.redis_client import revoke
+
+
+class LogoutRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    refresh_token: str | None = None
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
 
@@ -121,15 +131,18 @@ async def get_current_user(
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
     current_user: User = Depends(get_current_active_user),
-):
-    """
-    Logout current user (client-side token removal).
-    
-    Note: JWT tokens are stateless. This endpoint is for audit logging.
-    Client should remove token from local storage.
-    
-    Args:
-        current_user: Current authenticated user
-    """
-    # Token invalidation could be implemented with Redis blacklist if needed
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: LogoutRequest | None = None,
+) -> None:
+    """Revoke access and optional refresh tokens until their expiration."""
+    payload = decode_token(credentials.credentials)
+    refresh = None
+    if request and request.refresh_token:
+        refresh = decode_token(request.refresh_token)
+        if not refresh or refresh.get("type") != "refresh" or refresh.get("sub") != str(current_user.id):
+            raise HTTPException(status_code=401, detail="Refresh token non valido")
+    if payload:
+        revoke(payload)
+    if refresh:
+        revoke(refresh)
     return None
