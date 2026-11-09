@@ -20,7 +20,7 @@ class DeadlineService:
 
     @staticmethod
     def get_by_id(db: Session, deadline_id: int) -> Deadline:
-        deadline = db.query(Deadline).filter(Deadline.id == deadline_id).first()
+        deadline = db.query(Deadline).filter(Deadline.id == deadline_id, Deadline.is_active == True).first()
         if not deadline:
             raise ValueError(f"Deadline {deadline_id} non trovata")
         return deadline
@@ -34,7 +34,7 @@ class DeadlineService:
         skip: int = 0,
         limit: int = 100,
     ) -> list[Deadline]:
-        query = db.query(Deadline)
+        query = db.query(Deadline).filter(Deadline.is_active == True)
         if company_id:
             query = query.filter((Deadline.company_id == company_id) if company_id is not None else True)
         if worker_id:
@@ -55,7 +55,7 @@ class DeadlineService:
     @staticmethod
     def delete(db: Session, deadline_id: int) -> None:
         deadline = DeadlineService.get_by_id(db, deadline_id)
-        db.delete(deadline)
+        deadline.is_active = False
         db.commit()
 
     @staticmethod
@@ -84,6 +84,7 @@ class DeadlineService:
         alert_until = today + timedelta(days=days)
         
         return db.query(Deadline).filter(
+            Deadline.is_active == True,
             (Deadline.company_id == company_id) if company_id is not None else True,
             Deadline.data_scadenza >= today,
             Deadline.data_scadenza <= alert_until,
@@ -105,6 +106,7 @@ class DeadlineService:
         today = date.today()
         
         return db.query(Deadline).filter(
+            Deadline.is_active == True,
             (Deadline.company_id == company_id) if company_id is not None else True,
             Deadline.data_scadenza < today,
             Deadline.stato.in_([DeadlineStatus.PENDING, DeadlineStatus.ALERT])
@@ -151,6 +153,7 @@ class DeadlineService:
             Dict con conteggi per categoria
         """
         total = db.query(Deadline).filter(
+            Deadline.is_active == True,
             (Deadline.company_id == company_id) if company_id is not None else True,
             Deadline.stato != DeadlineStatus.COMPLETED
         ).count()
@@ -164,16 +167,19 @@ class DeadlineService:
             'alert_count': len(alerts),
             'by_priority': {
                 'HIGH': db.query(Deadline).filter(
+            Deadline.is_active == True,
                     (Deadline.company_id == company_id) if company_id is not None else True,
                     Deadline.priorita == 'HIGH',
                     Deadline.stato != DeadlineStatus.COMPLETED
                 ).count(),
                 'MEDIUM': db.query(Deadline).filter(
+            Deadline.is_active == True,
                     (Deadline.company_id == company_id) if company_id is not None else True,
                     Deadline.priorita == 'MEDIUM',
                     Deadline.stato != DeadlineStatus.COMPLETED
                 ).count(),
                 'LOW': db.query(Deadline).filter(
+            Deadline.is_active == True,
                     (Deadline.company_id == company_id) if company_id is not None else True,
                     Deadline.priorita == 'LOW',
                     Deadline.stato != DeadlineStatus.COMPLETED

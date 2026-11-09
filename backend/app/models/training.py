@@ -1,7 +1,7 @@
 """
 Training model - gestione formazione, corsi ed attestati.
 """
-from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, ForeignKey, Enum as SqlEnum, Float
+from sqlalchemy import true, Column, Integer, String, DateTime, Date, Boolean, ForeignKey, Enum as SqlEnum, Float
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from enum import Enum as PyEnum
@@ -84,6 +84,7 @@ class CourseParticipation(Base):
     """Partecipazione lavoratore a un'edizione del corso + attestato."""
     __tablename__ = "course_participations"
 
+    is_active = Column(Boolean, default=True, server_default=true(), nullable=False)
     id = Column(Integer, primary_key=True, index=True)
     edition_id = Column(Integer, ForeignKey("course_editions.id"), nullable=False, index=True)
     worker_id = Column(Integer, ForeignKey("workers.id"), nullable=False, index=True)

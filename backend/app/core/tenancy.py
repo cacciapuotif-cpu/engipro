@@ -7,7 +7,7 @@ from app.models import (Company, Worker, Location, Department, Deadline, Documen
                         CourseParticipation, DPIItem, DPIAssignment, AttendanceRecord)
 
 RESOURCES: dict[str, type] = {
-    "company_id": Company, "worker_id": Worker, "responsabile_id": Worker,
+    "company_id": Company, "worker_id": Worker, "responsabile_id": Worker, "assegnato_a": Worker,
     "location_id": Location, "department_id": Department, "deadline_id": Deadline,
     "document_id": Document, "documento_padre_id": Document,
     "protocol_id": HealthProtocol, "visit_id": MedicalVisit, "course_id": Course,

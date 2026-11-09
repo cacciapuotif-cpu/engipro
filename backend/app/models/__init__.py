@@ -22,3 +22,5 @@ __all__ = [
     "DPIItem", "DPIAssignment",
     "Timbratura", "AttendanceRecord",
 ]
+
+from app.models.audit_log import AuditLog

@@ -100,7 +100,7 @@ class ParticipationService:
 
     @staticmethod
     def get_by_id(db: Session, participation_id: int) -> CourseParticipation:
-        p = db.query(CourseParticipation).filter(CourseParticipation.id == participation_id).first()
+        p = db.query(CourseParticipation).filter(CourseParticipation.id == participation_id, CourseParticipation.is_active == True).first()
         if not p:
             raise ValueError(f"Partecipazione {participation_id} non trovata")
         return p
@@ -108,12 +108,14 @@ class ParticipationService:
     @staticmethod
     def get_by_worker(db: Session, worker_id: int, skip: int = 0, limit: int = 100) -> list[CourseParticipation]:
         return db.query(CourseParticipation).filter(
+            CourseParticipation.is_active == True,
             CourseParticipation.worker_id == worker_id
         ).order_by(CourseParticipation.created_at.desc()).offset(skip).limit(limit).all()
 
     @staticmethod
     def get_by_edition(db: Session, edition_id: int) -> list[CourseParticipation]:
         return db.query(CourseParticipation).filter(
+            CourseParticipation.is_active == True,
             CourseParticipation.edition_id == edition_id
         ).all()
 
@@ -129,5 +131,5 @@ class ParticipationService:
     @staticmethod
     def delete(db: Session, participation_id: int) -> None:
         p = ParticipationService.get_by_id(db, participation_id)
-        db.delete(p)
+        p.is_active = False
         db.commit()

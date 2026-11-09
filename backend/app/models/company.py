@@ -1,7 +1,7 @@
 """
 Company models - represents companies and their locations/departments.
 """
-from sqlalchemy import Column, Integer, String, DateTime, Float, ForeignKey
+from sqlalchemy import true, Boolean, Column, Integer, String, DateTime, Float, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from app.core.database import Base
@@ -12,6 +12,7 @@ class Company(Base):
     
     __tablename__ = "companies"
     
+    is_active = Column(Boolean, default=True, server_default=true(), nullable=False)
     id = Column(Integer, primary_key=True, index=True)
     ragione_sociale = Column(String(255), nullable=False, index=True)
     partita_iva = Column(String(11), unique=True, nullable=False, index=True)

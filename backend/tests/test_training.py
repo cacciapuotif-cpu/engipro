@@ -142,7 +142,8 @@ class TestParticipationService:
         p = make_participation()
         db.query.return_value.filter.return_value.first.return_value = p
         ParticipationService.delete(db, 1)
-        db.delete.assert_called_once_with(p)
+        assert p.is_active is False
+        db.delete.assert_not_called()
         db.commit.assert_called_once()
 
     def test_attestato_enum(self):

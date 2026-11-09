@@ -24,6 +24,8 @@ from app.api.medical import router as medical_router
 from app.api.dpi import router as dpi_router
 from app.api.attendance import router as attendance_router
 
+from app.api.audit import router as audit_router
+app.include_router(audit_router)
 app.include_router(auth_router)
 app.include_router(companies_router)
 app.include_router(workers_router)
@@ -36,6 +38,8 @@ app.include_router(attendance_router)
 
 from app.core.rate_limit import RateLimitMiddleware
 app.add_middleware(RateLimitMiddleware)
+from app.core.audit_middleware import AuditMiddleware
+app.add_middleware(AuditMiddleware)
 
 # CORS middleware
 app.add_middleware(

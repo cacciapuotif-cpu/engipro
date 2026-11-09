@@ -1,7 +1,7 @@
 """
 Deadline model - represents deadlines/scadenze for workers and companies.
 """
-from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, ForeignKey, Enum as SqlEnum, Float
+from sqlalchemy import true, Column, Integer, String, DateTime, Date, Boolean, ForeignKey, Enum as SqlEnum, Float
 from sqlalchemy.orm import relationship
 from datetime import datetime, date, timezone
 from enum import Enum as PyEnum
@@ -40,6 +40,7 @@ class Deadline(Base):
     
     __tablename__ = "deadlines"
     
+    is_active = Column(Boolean, default=True, server_default=true(), nullable=False)
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     worker_id = Column(Integer, ForeignKey("workers.id"), nullable=True, index=True)

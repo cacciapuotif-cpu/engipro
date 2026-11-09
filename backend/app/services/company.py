@@ -40,7 +40,7 @@ class CompanyService:
             raise ValueError(f"Company with CF {company_data.codice_fiscale} already exists")
         
         # Create company
-        company = Company(**company_data.dict())
+        company = Company(**company_data.model_dump())
         db.add(company)
         db.commit()
         db.refresh(company)
@@ -50,7 +50,7 @@ class CompanyService:
     @staticmethod
     def get_by_id(db: Session, company_id: int) -> Company:
         """Get company by ID."""
-        company = db.query(Company).filter(Company.id == company_id).first()
+        company = db.query(Company).filter(Company.id == company_id, Company.is_active == True).first()
         if not company:
             raise ValueError(f"Company with ID {company_id} not found")
         return company
@@ -58,14 +58,14 @@ class CompanyService:
     @staticmethod
     def get_all(db: Session, skip: int = 0, limit: int = 100) -> list[Company]:
         """Get all companies with pagination."""
-        return db.query(Company).offset(skip).limit(limit).all()
+        return db.query(Company).filter(Company.is_active == True).offset(skip).limit(limit).all()
     
     @staticmethod
     def update(db: Session, company_id: int, company_data: CompanyUpdate) -> Company:
         """Update company."""
         company = CompanyService.get_by_id(db, company_id)
         
-        update_data = company_data.dict(exclude_unset=True)
+        update_data = company_data.model_dump(exclude_unset=True)
         for key, value in update_data.items():
             setattr(company, key, value)
         
@@ -86,7 +86,7 @@ class CompanyService:
             synchronize_session=False,
         )
         
-        db.delete(company)
+        company.is_active = False
         db.commit()
     
     @staticmethod
