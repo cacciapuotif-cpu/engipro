@@ -1,7 +1,7 @@
 """
 FastAPI dependencies for authentication and authorization.
 """
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -86,3 +86,16 @@ def require_role(*roles: UserRole):
         return current_user
     
     return check_role
+
+
+async def get_company_scope(request: Request, current_user: User = Depends(get_current_active_user)) -> int | None:
+    """ADMIN has global scope; every other role must belong to a company."""
+    if current_user.role == UserRole.ADMIN:
+        return None
+    if current_user.company_id is None:
+        raise HTTPException(403, "Utente non associato a un'azienda")
+    if request.method in {"POST", "PUT", "PATCH"} and request.headers.get("content-type", "").startswith("application/json"):
+        values = await request.json()
+        if isinstance(values, dict) and "company_id" in values and values["company_id"] != current_user.company_id:
+            raise HTTPException(403, "Azienda non autorizzata")
+    return current_user.company_id

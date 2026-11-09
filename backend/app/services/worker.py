@@ -51,7 +51,7 @@ class WorkerService:
                 raise ValueError("Department not found or doesn't belong to this company")
         
         # Create worker
-        worker = Worker(**worker_data.dict())
+        worker = Worker(**worker_data.model_dump())
         db.add(worker)
         db.commit()
         db.refresh(worker)
@@ -141,7 +141,7 @@ class WorkerService:
             if not department or department.company_id != worker.company_id:
                 raise ValueError("Department not found or doesn't belong to this company")
         
-        update_data = worker_data.dict(exclude_unset=True)
+        update_data = worker_data.model_dump(exclude_unset=True)
         for key, value in update_data.items():
             setattr(worker, key, value)
         

@@ -16,7 +16,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     """Schema for user creation."""
-    password: str = Field(min_length=8, max_length=128)
+    password: str = Field(min_length=10, max_length=128)
 
 
 class UserLogin(BaseModel):
@@ -29,7 +29,7 @@ class UserUpdate(BaseModel):
     """Schema for user update."""
     full_name: Optional[str] = None
     email: Optional[EmailStr] = None
-    password: Optional[str] = Field(None, min_length=8, max_length=128)
+    password: Optional[str] = Field(None, min_length=10, max_length=128)
 
 
 class UserResponse(UserBase):

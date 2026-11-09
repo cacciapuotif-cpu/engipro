@@ -4,7 +4,11 @@ Authentication API routes.
 from fastapi import Path, APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.core.dependencies import get_current_active_user
+from app.core.dependencies import get_current_active_user, security
+from fastapi.security import HTTPAuthorizationCredentials
+from pydantic import BaseModel, ConfigDict
+from app.core.security import decode_token
+from app.core.redis_client import revoke_token
 from app.models import User
 from app.schemas import (
     UserCreate,
@@ -118,18 +122,26 @@ async def get_current_user(
     return current_user
 
 
+class LogoutRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    refresh_token: str | None = None
+
+
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
+    body: LogoutRequest | None = None,
     current_user: User = Depends(get_current_active_user),
-):
-    """
-    Logout current user (client-side token removal).
-    
-    Note: JWT tokens are stateless. This endpoint is for audit logging.
-    Client should remove token from local storage.
-    
-    Args:
-        current_user: Current authenticated user
-    """
-    # Token invalidation could be implemented with Redis blacklist if needed
-    return None
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> None:
+    refresh_payload = None
+    if body and body.refresh_token:
+        refresh_payload = decode_token(body.refresh_token)
+        if (not refresh_payload or refresh_payload.get("type") != "refresh"
+                or refresh_payload.get("sub") != str(current_user.id)
+                or not refresh_payload.get("jti")):
+            raise HTTPException(401, "Refresh token non valido")
+    payload = decode_token(credentials.credentials)
+    if payload:
+        revoke_token(payload)
+    if refresh_payload:
+        revoke_token(refresh_payload)

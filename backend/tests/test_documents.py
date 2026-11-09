@@ -111,3 +111,52 @@ class TestDocumentService:
         assert DocumentCategory.SICUREZZA == "SICUREZZA"
         assert DocumentCategory.FORMAZIONE == "FORMAZIONE"
         assert DocumentCategory.MEDICINA == "MEDICINA"
+
+from fastapi.testclient import TestClient
+from app.main import app
+from app.core.storage import get_storage
+from app.core.config import settings
+
+
+@pytest.fixture
+def storage_mock(api_client: TestClient):
+    storage = MagicMock()
+    app.dependency_overrides[get_storage] = lambda: storage
+    yield storage
+    app.dependency_overrides.pop(get_storage, None)
+
+
+def test_upload_and_download(api_client: TestClient, storage_mock: MagicMock) -> None:
+    response = api_client.post("/api/v1/documents/upload", data={"company_id": 1},
+                               files={"file": ("test.pdf", b"%PDF-test", "application/pdf")})
+    assert response.status_code == 201, response.text
+    doc = response.json()
+    assert doc["storage_key"].startswith("companies/1/documents/")
+    assert doc["storage_key"].endswith(".pdf")
+    storage_mock.upload_file.assert_called_once_with(doc["storage_key"], b"%PDF-test", "application/pdf")
+    storage_mock.get_presigned_url.return_value = "https://storage.example/signed"
+    response = api_client.get(f'/api/v1/documents/{doc["id"]}/download', follow_redirects=False)
+    assert response.status_code == 302
+    assert response.headers["location"] == "https://storage.example/signed"
+
+
+def test_upload_too_large(api_client: TestClient, storage_mock: MagicMock, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "MAX_UPLOAD_FILE_SIZE", 3)
+    response = api_client.post("/api/v1/documents/upload", data={"company_id": 1},
+                               files={"file": ("test.pdf", b"1234", "application/pdf")})
+    assert response.status_code == 413
+    storage_mock.upload_file.assert_not_called()
+
+
+def test_upload_invalid_type(api_client: TestClient, storage_mock: MagicMock) -> None:
+    response = api_client.post("/api/v1/documents/upload", data={"company_id": 1},
+                               files={"file": ("test.html", b"html", "text/html")})
+    assert response.status_code == 415
+    storage_mock.upload_file.assert_not_called()
+
+
+def test_storage_unavailable(api_client: TestClient, storage_mock: MagicMock) -> None:
+    storage_mock.upload_file.side_effect = ConnectionError()
+    response = api_client.post("/api/v1/documents/upload", data={"company_id": 1},
+                               files={"file": ("test.pdf", b"pdf", "application/pdf")})
+    assert response.status_code == 503

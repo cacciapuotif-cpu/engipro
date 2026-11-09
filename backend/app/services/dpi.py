@@ -89,7 +89,7 @@ class DPIAssignmentService:
     @staticmethod
     def get_by_company(db: Session, company_id: int, skip: int = 0, limit: int = 100) -> list[DPIAssignment]:
         return db.query(DPIAssignment).filter(
-            DPIAssignment.company_id == company_id
+            (DPIAssignment.company_id == company_id) if company_id is not None else True
         ).order_by(DPIAssignment.data_assegnazione.desc()).offset(skip).limit(limit).all()
 
     @staticmethod

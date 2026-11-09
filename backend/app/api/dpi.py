@@ -5,6 +5,8 @@ from fastapi import Path, APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import Optional
 from app.core.database import get_db
+from app.core.dependencies import get_company_scope
+from app.core.tenancy import require_resource, validate_write, owner_id
 from app.core.dependencies import get_current_active_user
 from app.models import User
 from app.models.dpi import DPICategory, DPIStatus
@@ -22,10 +24,12 @@ router = APIRouter(prefix="/api/v1/dpi", tags=["DPI"])
 @router.post("/items", response_model=DPIItemResponse, status_code=status.HTTP_201_CREATED)
 async def create_dpi_item(
     data: DPIItemCreate,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """Crea nuovo DPI nel catalogo."""
+    validate_write(db, data.model_dump(exclude_unset=True), scope, None)
     return DPIItemService.create(db, data)
 
 
@@ -36,20 +40,24 @@ async def list_dpi_items(
     stato: Optional[DPIStatus] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """Lista DPI con filtri."""
+    company_id = scope if scope is not None else company_id
     return DPIItemService.get_all(db, company_id, categoria, stato, skip, limit)
 
 
 @router.get("/items/{item_id}", response_model=DPIItemResponse)
 async def get_dpi_item(
     item_id: int,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """Ottieni DPI per ID."""
+    resource = require_resource(db, "item_id", item_id, scope)
     try:
         return DPIItemService.get_by_id(db, item_id)
     except ValueError as e:
@@ -60,10 +68,13 @@ async def get_dpi_item(
 async def update_dpi_item(
     item_id: int,
     data: DPIItemUpdate,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """Aggiorna DPI."""
+    resource = require_resource(db, "item_id", item_id, scope)
+    validate_write(db, data.model_dump(exclude_unset=True), scope, owner_id(db, resource))
     try:
         return DPIItemService.update(db, item_id, data)
     except ValueError as e:
@@ -73,10 +84,12 @@ async def update_dpi_item(
 @router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_dpi_item(
     item_id: int,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """Elimina DPI (soft delete)."""
+    resource = require_resource(db, "item_id", item_id, scope)
     try:
         DPIItemService.delete(db, item_id)
     except ValueError as e:
@@ -88,10 +101,12 @@ async def delete_dpi_item(
 @router.post("/assignments", response_model=DPIAssignmentResponse, status_code=status.HTTP_201_CREATED)
 async def create_assignment(
     data: DPIAssignmentCreate,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """Assegna DPI a lavoratore."""
+    validate_write(db, data.model_dump(exclude_unset=True), scope, None)
     return DPIAssignmentService.create(db, data)
 
 
@@ -100,10 +115,12 @@ async def list_assignments_by_company(
     company_id: Optional[int] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """Lista assegnazioni azienda."""
+    company_id = scope if scope is not None else company_id
     return DPIAssignmentService.get_by_company(db, company_id, skip, limit)
 
 
@@ -112,20 +129,24 @@ async def list_assignments_by_worker(
     worker_id: int,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """Lista DPI assegnati a un lavoratore."""
+    resource = require_resource(db, "worker_id", worker_id, scope)
     return DPIAssignmentService.get_by_worker(db, worker_id, skip, limit)
 
 
 @router.get("/assignments/{assignment_id}", response_model=DPIAssignmentResponse)
 async def get_assignment(
     assignment_id: int,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """Ottieni assegnazione per ID."""
+    resource = require_resource(db, "assignment_id", assignment_id, scope)
     try:
         return DPIAssignmentService.get_by_id(db, assignment_id)
     except ValueError as e:
@@ -136,10 +157,13 @@ async def get_assignment(
 async def update_assignment(
     assignment_id: int,
     data: DPIAssignmentUpdate,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """Aggiorna assegnazione DPI."""
+    resource = require_resource(db, "assignment_id", assignment_id, scope)
+    validate_write(db, data.model_dump(exclude_unset=True), scope, owner_id(db, resource))
     try:
         return DPIAssignmentService.update(db, assignment_id, data)
     except ValueError as e:
@@ -149,10 +173,12 @@ async def update_assignment(
 @router.post("/assignments/{assignment_id}/return", response_model=DPIAssignmentResponse)
 async def return_dpi(
     assignment_id: int,
+    scope: int | None = Depends(get_company_scope),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """Registra restituzione DPI."""
+    resource = require_resource(db, "assignment_id", assignment_id, scope)
     try:
         return DPIAssignmentService.return_dpi(db, assignment_id)
     except ValueError as e:
